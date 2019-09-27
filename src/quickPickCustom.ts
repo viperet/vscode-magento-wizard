@@ -12,6 +12,7 @@ export default function createQuickPickCustom(title: string, values:string[] | P
 				// New value entered
 				const value = quickPick.value;
 				quickPick.hide();
+                resolve(value);
 			}
 		});
 		quickPick.onDidChangeSelection(selection => {
