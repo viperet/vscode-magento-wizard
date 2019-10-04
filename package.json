@@ -11,14 +11,19 @@
 		"Other"
 	],
 	"activationEvents": [
-		"onCommand:extension.newExtension"
+		"onCommand:extension.newExtension",
+		"workspaceContains:app/etc/env.php"
 	],
 	"main": "./dist/extension.js",
 	"contributes": {
 		"commands": [
 			{
-				"command": "extension.newExtension",
+				"command": "magentowizard.newExtension",
 				"title": "MagentoWizard: Create a new extension"
+			},
+			{
+				"command": "magentowizard.injectDependency",
+				"title": "MagentoWizard: Inject Dependency"
 			}
 		]
 	},
@@ -49,6 +54,7 @@
 		"@icetee/handlebars-loader": "^1.6.0"
 	},
 	"dependencies": {
-		"handlebars": "^4.3.1"
+		"handlebars": "^4.3.1",
+		"php-parser": "^3.0.0-prerelease.9"
 	}
 }
