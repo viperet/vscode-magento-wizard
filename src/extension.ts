@@ -17,10 +17,23 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(vscode.commands.registerCommand('magentowizard.injectDependency', async () => {
         let textEditor = vscode.window.activeTextEditor;
         if (textEditor) {
-            try {
-                magento.injectDependency(textEditor);
-            } catch(e) {
-                vscode.window.showErrorMessage(e.message);
+            let className = await createQuickPickCustom('Please select class or interface to inject', magento.getClasses());
+            if (className) {
+                var varName = await vscode.window.showInputBox({
+                    prompt: 'Enter variable name',
+                    value: magento.suggestVariableName(className),
+                    validateInput: value => { return !value.match(/\$?[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*/) ? 'Incorrect variable name' : '' ; },
+                });
+                if (varName) {
+                    // strip $ from the variable name
+                    varName = varName.startsWith('$') ? varName.substring(1) : varName;
+
+                    try {
+                        magento.injectDependency(textEditor, className, varName);
+                    } catch(e) {
+                        vscode.window.showErrorMessage(e.message);
+                    }
+                }
             }
         }
     }));

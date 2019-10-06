@@ -19,6 +19,14 @@
 			"preLaunchTask": "npm: webpack"
 		},
 		{
+			"name": "Run Classes generator",
+			"type": "node",
+			"request": "launch",
+			"preLaunchTask": "npm: compile",
+			"program": "${workspaceFolder}/out/utils/classes.js",
+			"args": ["/Users/viperet/Documents/Work/Magento-CE-2.3.2-2019-06-13-03-19-34/vendor/magento/"]
+		},
+		{
 			"name": "Extension Tests",
 			"type": "extensionHost",
 			"request": "launch",

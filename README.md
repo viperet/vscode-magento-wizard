@@ -9,6 +9,7 @@ Creating new extension using "MagentoWizard: Create a new extension" command:
 \!\[Creating new extension\]\(images/create_extension.gif\)
 
 ### Planned features
+
 - [x] Extension creation
 - [x] Populating created *.php, *.xml, *.js files by template contents based on their name and location
 - [ ] Injecting dependencies

@@ -54,6 +54,7 @@
 		"@icetee/handlebars-loader": "^1.6.0"
 	},
 	"dependencies": {
+		"camelcase": "^5.3.1",
 		"handlebars": "^4.3.1",
 		"php-parser": "^3.0.0-prerelease.9"
 	}

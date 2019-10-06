@@ -28,6 +28,34 @@ class Ast {
         return this.ast;
     }
 
+    getAliases(): { [alias: string]: string } {
+        let aliases: { [alias: string]: string } = {};
+        if (
+            this.ast &&
+            this.ast.children &&
+            this.ast.children[0] &&
+            (this.ast.children[0] as Block).children
+        ) {
+            let uses = (this.ast.children[0] as Block).children.filter(block => { return block.kind ===  'usegroup'; });
+            for(let usegroup of uses) {
+                for(let useitem of (usegroup as any).items) {
+                    let alias;
+                    if (useitem.alias) {
+                        alias = useitem.alias.name;
+                    } else {
+                        alias = useitem.name.split('\\').pop();
+                    }
+                    if (useitem.name.startsWith('\\')) {
+                        aliases[alias] = useitem.name;
+                    } else {
+                        aliases[alias] = '\\' + useitem.name;
+                    }
+                }
+            }
+        }
+        return aliases;
+    }
+
     /**
      * Finds node corresponding to the class with given name
      *

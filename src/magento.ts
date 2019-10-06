@@ -1,12 +1,13 @@
-import { window, workspace, Uri, FileType, TextDocument, TextEditor, Position, Range } from 'vscode';
+import { workspace, Uri, FileType, TextDocument, TextEditor, Position, Range } from 'vscode';
 import { posix } from 'path';
 import * as Handlebars from 'handlebars';
 import Ast from './ast';
+import classList from './classlist';
+import camelCase from 'camelcase';
 
 const fs = workspace.fs;
 
 import { TextEncoder } from 'util';
-import { stringify } from 'querystring';
 import * as Parser from 'php-parser';
 
 interface UriData {
@@ -191,10 +192,8 @@ class Magento {
         return result;
     }
 
-    injectDependency(textEditor: TextEditor ) {
+    injectDependency(textEditor: TextEditor, className: string, varName: string ) {
         let document = textEditor.document;
-        let className = '\\Magento\\Backend\\Model\\Menu\\Item\\Factory';
-        let varName = 'menuItemFactory';
         if (textEditor.document.languageId !== 'php') {
             throw new Error('Only supported for PHP files');
         }
@@ -336,6 +335,18 @@ class Magento {
 
     }
 
+    getClasses(): string[] {
+        return classList;
+    }
+
+    suggestVariableName(className: string): string {
+        let varname = className.split('\\').pop();
+        if (!varname) {
+            return '';
+        }
+        varname = varname.replace(/Interface$/, '');
+        return camelCase(varname);
+    }
 }
 
 

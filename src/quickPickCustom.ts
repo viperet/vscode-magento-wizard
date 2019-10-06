@@ -25,8 +25,8 @@ export default function createQuickPickCustom(title: string, values:string[] | P
 		});
 		quickPick.onDidHide(() => quickPick.dispose());
         quickPick.show();
-        if (typeof values === 'string') {
-            quickPick.items = values;
+        if (values instanceof Array) {
+            quickPick.items = values.map(item => { return { label: item };});
         } else if (values instanceof Promise) {
             quickPick.busy = true;
             values.then(items => {
