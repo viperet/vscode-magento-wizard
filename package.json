@@ -1,5 +1,10 @@
 {
-	"name": "magentowizard",
+	"name": "vscode-magento-wizard",
+	"repository": {
+		"url": "https://github.com/viperet/vscode-magento-wizard",
+		"type": "git"
+	},
+	"publisher": "viperet",
 	"displayName": "MagentoWizard",
 	"description": "Helps develop Magento 2 extensions",
 	"version": "0.0.1",
