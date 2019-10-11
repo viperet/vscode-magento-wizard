@@ -178,6 +178,15 @@ class Magento {
         }
     }
 
+    /**
+     * Create Docblock string
+     *
+     * @private
+     * @param {TextEditor} textEditor
+     * @param {Docblock} docblock
+     * @returns
+     * @memberof Magento
+     */
     private docblock(textEditor: TextEditor, docblock: Docblock) {
         let indent = this.indentCode(textEditor, 1);
         let result = indent + '/**\n';
@@ -192,6 +201,14 @@ class Magento {
         return result;
     }
 
+    /**
+     * DI automation
+     *
+     * @param {TextEditor} textEditor
+     * @param {string} className
+     * @param {string} varName
+     * @memberof Magento
+     */
     injectDependency(textEditor: TextEditor, className: string, varName: string ) {
         let document = textEditor.document;
         if (textEditor.document.languageId !== 'php') {
@@ -335,10 +352,23 @@ class Magento {
 
     }
 
+    /**
+     * Returns array of classes to be used in DI
+     *
+     * @returns {string[]}
+     * @memberof Magento
+     */
     getClasses(): string[] {
         return classList;
     }
 
+    /**
+     * Creates variable name (without $ symbol) from class name
+     *
+     * @param {string} className
+     * @returns {string}
+     * @memberof Magento
+     */
     suggestVariableName(className: string): string {
         let varname = className.split('\\').pop();
         if (!varname) {
