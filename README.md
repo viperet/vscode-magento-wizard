@@ -6,11 +6,13 @@ This extension will ease life of the Magento 2 developer by automating some repe
 
 Creating new extension using `MagentoWizard: Create a new extension` command:
 
-\!\[Creating new extension\]\(images/create_extension.gif\)
+![Creating new extension](https://github.com/viperet/vscode-magento-wizard/raw/master/images/create_extension.gif)
 
 When you create new file (for example di.xml), extension provides handy default content for it. Works for some xml file, blocks, models, controllers, setup scripts, etc.
 
 When editing class file you can inject new dependency by pressing `F1` and using `MagentoWizard: Inject Dependency` command.
+
+![Dependency Injection ](https://github.com/viperet/vscode-magento-wizard/raw/master/images/dependency-injection.gif)
 
 ### Planned features
 
