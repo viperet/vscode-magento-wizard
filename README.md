@@ -29,6 +29,6 @@ When editing class file you can inject new dependency by pressing `F1` and using
 
 First public release of the extension
 
-### 1.0.0
+### 1.0.1
 
 Initial release of MagentoWizard

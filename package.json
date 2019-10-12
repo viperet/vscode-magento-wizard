@@ -4,11 +4,18 @@
 		"url": "https://github.com/viperet/vscode-magento-wizard",
 		"type": "git"
 	},
+	"bugs": {
+		"url": "https://github.com/viperet/vscode-magento-wizard/issues",
+		"email": "viperet@gmail.com"
+	},
 	"publisher": "viperet",
 	"displayName": "MagentoWizard",
-	"description": "Helps develop Magento 2 extensions",
+	"description": "Will ease life of the Magento 2 developer by automating some repeating tasks, like injecting dependency",
 	"version": "1.0.0",
 	"extensionKind": "workspace",
+	"preview": true,
+	"category": "Other",
+	"icon": "images/magento-wizard-logo.png",
 	"engines": {
 		"vscode": "^1.38.0"
 	},

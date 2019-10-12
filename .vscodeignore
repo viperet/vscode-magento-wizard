@@ -3,10 +3,9 @@
 dist/test/**
 out/**
 node_modules/**
-images/**
+images/*.gif
 src/**
 .gitignore
-vsc-extension-quickstart.md
 **/tsconfig.json
 **/tslint.json
 **/*.map
