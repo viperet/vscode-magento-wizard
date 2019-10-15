@@ -1,4 +1,4 @@
-import { workspace, Uri, FileType, TextDocument, TextEditor, Position, Range, WorkspaceEdit } from 'vscode';
+import { workspace, Uri, FileType, TextDocument, TextEditor, Position, Range, WorkspaceEdit, DocumentLink, window } from 'vscode';
 import { posix } from 'path';
 import * as Handlebars from 'handlebars';
 import Ast from './ast';
@@ -405,33 +405,74 @@ class Magento {
         return camelCase(eventName);
     }
 
+    async readFile(uri: Uri): Promise<string> {
+        for(let textEditor of window.visibleTextEditors) {
+            if (textEditor.document.uri.toString() === uri.toString()) {
+                // return contents of the open document
+                return textEditor.document.getText();
+            }
+        }
+        // if no open document found, read from file
+        let text = await fs.readFile(uri);
+        return this.decoder(text);
+    }
+
+    async writeFile(uri: Uri, text: string): Promise<void> {
+        for(let textEditor of window.visibleTextEditors) {
+            if (textEditor.document.uri.toString() === uri.toString()) {
+                // write to the open document
+                let isDirty = textEditor.document.isDirty;
+                let startPosition = new Position(0,0);
+                let endPosition = textEditor.document.validatePosition(new Position(textEditor.document.lineCount-1, 100000));
+                await textEditor.edit(editBuilder => {
+                    editBuilder.delete(new Range(startPosition, endPosition));
+                    editBuilder.insert(startPosition, text);
+                });
+                if (!isDirty) {
+                    textEditor.document.save();
+                }
+                return;
+            }
+        }
+        // if no open document found, write to file
+        await fs.writeFile(uri, this.encoder(text));
+        return;
+    }
+
+    async fileExists(uri: Uri): Promise<boolean> {
+        try {
+            let stat = await fs.stat(uri);
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
     async addObserver(textEditor: TextEditor, eventName: string, observerName: string): Promise<void> {
         let extensionData = this.getUriData(textEditor.document.uri);
         if (!workspace.workspaceFolders) {
             throw new Error('No open workspace');
         }
         let eventsXmlUri = this.appendUri(workspace.workspaceFolders[0].uri, 'app', 'code', extensionData.vendor, extensionData.extension, 'etc', 'events.xml');
+        let observerPhpUri = this.appendUri(workspace.workspaceFolders[0].uri, 'app', 'code', extensionData.vendor, extensionData.extension, 'Observer',  ...(observerName+'.php').split('\\'));
 
-        let edit = new WorkspaceEdit();
-
-        edit.createFile(eventsXmlUri, { ignoreIfExists: true });
-
-        try {
-            var stats = await fs.stat(eventsXmlUri);
-        } catch {
-            let eventsXml = require('../templates/etc/events.xml')(Object.assign({ eventName, observerName }, extensionData));
-            try {
-                await fs.writeFile(eventsXmlUri, this.encoder(eventsXml));
-                // don't need to wait for document to open
-                workspace.openTextDocument(eventsXmlUri);
-            } catch (e) {
-                console.log(e);
-                throw new Error('Can\'t create '+eventsXmlUri.toString(true));
-            }
-            return;
+        if (await this.fileExists(observerPhpUri)) {
+            throw new Error(observerPhpUri.toString(true)+' already exists');
         }
-        if (stats.type === FileType.File) {
-            let eventsXml = textDocument.getText();
+
+        let stats;
+        try {
+            stats = await fs.stat(eventsXmlUri);
+        } catch {
+            // file not found
+            let eventsXml = require('../templates/etc/events.xml')(Object.assign({ eventName, observerName }, extensionData));
+            this.writeFile(eventsXmlUri, eventsXml);
+        }
+        if (stats) {
+            if (stats.type !== FileType.File) {
+                throw new Error(eventsXmlUri.toString(true)+' is not a file');
+            }
+            let eventsXml = await this.readFile(eventsXmlUri);
             try {
                 var xml = convert.xml2js(eventsXml, {
                     compact: false,
@@ -467,17 +508,14 @@ class Magento {
                     spaces: this.indentCode(textEditor, 1),
                     compact: false,
                 });
-                try {
-                    await fs.writeFile(eventsXmlUri, this.encoder(eventsXml));
-                } catch {
-                    throw new Error('Error saving '+eventsXmlUri.toString(true));
-                }
+                await this.writeFile(eventsXmlUri, eventsXml);
             } else {
                 throw new Error('Error parsing '+eventsXmlUri.toString(true));
             }
-        } else {
-            throw new Error(eventsXmlUri.toString(true)+' is not a file');
         }
+
+        let observerPhp = require('../templates/observer.php')(this.getUriData(observerPhpUri));
+        this.writeFile(observerPhpUri, observerPhp);
     }
 }
 
