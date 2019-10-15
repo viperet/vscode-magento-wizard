@@ -1,9 +1,12 @@
 const templates: { [key: string]: string } = {
-    'di\.xml$': require('../templates/di.xml'),
-    'acl\.xml$': require('../templates/acl.xml'),
-    'crontab\.xml$': require('../templates/crontab.xml'),
-    'routes\.xml$': require('../templates/routes.xml'),
+    '\/etc\/module\.xml$': require('../templates/etc/module.xml'),
+    'di\.xml$': require('../templates/etc/di.xml'),
+    'acl\.xml$': require('../templates/etc/acl.xml'),
+    'crontab\.xml$': require('../templates/etc/crontab.xml'),
+    'routes\.xml$': require('../templates/etc/routes.xml'),
+    'events\.xml$': require('../templates/etc/events.xml'),
     '\/view\/(frontend|adminhtml)\/layout\/.*\.xml$': require('../templates/layout.xml'),
+
     '\/Block\/.*\.php$': require('../templates/block.php'),
     '\/Controller\/.*\.php$': require('../templates/controller.php'),
     '\/Model\/.*\.php$': require('../templates/model.php'),

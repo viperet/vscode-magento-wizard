@@ -42,7 +42,7 @@ const config = {
                 test: /\/templates\//,
                 use: [
                     {
-                        loader: '@icetee/handlebars-loader'
+                        loader: '@icetee/handlebars-loader?helperDirs[]=' + __dirname + '/helpers'
                     }
                 ]
             }
