@@ -36,6 +36,10 @@
 			{
 				"command": "magentowizard.injectDependency",
 				"title": "MagentoWizard: Inject Dependency"
+			},
+			{
+				"command": "magentowizard.addObserver",
+				"title": "MagentoWizard: Add Observer"
 			}
 		]
 	},
@@ -51,23 +55,24 @@
 		"test-compile": "tsc -p ./"
 	},
 	"devDependencies": {
+		"@icetee/handlebars-loader": "^1.6.0",
 		"@types/glob": "^7.1.1",
 		"@types/mocha": "^5.2.6",
 		"@types/node": "^10.12.21",
 		"@types/vscode": "^1.38.0",
 		"glob": "^7.1.4",
+		"handlebars": "^4.3.1",
 		"mocha": "^6.1.4",
 		"ts-loader": "^6.1.2",
 		"tslint": "^5.12.1",
 		"typescript": "^3.3.1",
 		"vscode-test": "^1.2.0",
 		"webpack": "^4.41.0",
-		"webpack-cli": "^3.3.9",
-		"@icetee/handlebars-loader": "^1.6.0"
+		"webpack-cli": "^3.3.9"
 	},
 	"dependencies": {
 		"camelcase": "^5.3.1",
-		"handlebars": "^4.3.1",
-		"php-parser": "^3.0.0-prerelease.9"
+		"php-parser": "^3.0.0-prerelease.9",
+		"xml-js": "^1.6.11"
 	}
 }

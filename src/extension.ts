@@ -37,6 +37,26 @@ export function activate(context: vscode.ExtensionContext) {
             }
         }
     }));
+    context.subscriptions.push(vscode.commands.registerCommand('magentowizard.addObserver', async () => {
+        let textEditor = vscode.window.activeTextEditor;
+        if (textEditor) {
+            let eventName = await createQuickPickCustom('Please select event name', magento.getEvents());
+            if (eventName) {
+                var observerName = await vscode.window.showInputBox({
+                    prompt: 'Enter observer class name',
+                    value: magento.suggestObserverName(eventName),
+                    validateInput: value => { return !value.match(/[a-z][a-zA-Z0-9_\x7f-\xff]*/) ? 'Incorrect variable name' : '' ; },
+                });
+                if (observerName) {
+                    try {
+                        await magento.addObserver(textEditor, eventName, observerName);
+                    } catch (e) {
+                        vscode.window.showErrorMessage(e.message);
+                    }
+                }
+            }
+        }
+    }));
     context.subscriptions.push(vscode.workspace.onDidOpenTextDocument(textDocument => {
         magento.applyTemplate(textDocument);
     }));

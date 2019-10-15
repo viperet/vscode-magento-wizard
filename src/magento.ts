@@ -1,13 +1,14 @@
-import { workspace, Uri, FileType, TextDocument, TextEditor, Position, Range } from 'vscode';
+import { workspace, Uri, FileType, TextDocument, TextEditor, Position, Range, WorkspaceEdit } from 'vscode';
 import { posix } from 'path';
 import * as Handlebars from 'handlebars';
 import Ast from './ast';
 import classList from './classlist';
 import camelCase from 'camelcase';
+import * as convert  from 'xml-js';
 
 const fs = workspace.fs;
 
-import { TextEncoder } from 'util';
+import { TextEncoder, TextDecoder } from 'util';
 import * as Parser from 'php-parser';
 
 interface UriData {
@@ -33,12 +34,16 @@ interface Insert {
 class Magento {
     registrationTemplate: Handlebars.TemplateDelegate;
     moduleTemplate: Handlebars.TemplateDelegate;
-    encoder: TextEncoder;
+    encoder: (input?: string | undefined) => Uint8Array;
+    decoder: (input?: Uint8Array | Uint8ClampedArray | Uint16Array | Uint32Array | Int8Array | Int16Array | Int32Array | Float32Array | Float64Array | DataView | ArrayBuffer | null | undefined, options?: any | undefined) => string;
 
     constructor() {
         this.registrationTemplate = require('../templates/registration.php');
-        this.moduleTemplate = require('../templates/module.xml');
-        this.encoder = new TextEncoder();
+        this.moduleTemplate = require('../templates/etc/module.xml');
+        let encoder = new TextEncoder();
+        this.encoder = encoder.encode.bind(encoder);
+        let decoder = new TextDecoder();
+        this.decoder = decoder.decode.bind(decoder);
     }
 
     /**
@@ -118,11 +123,11 @@ class Magento {
             try {
                 await fs.writeFile(
                     this.appendUri(extensionUri, 'registration.php'),
-                    this.encoder.encode(this.registrationTemplate({ vendor, extension }))
+                    this.encoder(this.registrationTemplate({ vendor, extension }))
                 );
                 await fs.writeFile(
                     this.appendUri(extensionUri, 'etc', 'module.xml'),
-                    this.encoder.encode(this.moduleTemplate({ vendor, extension }))
+                    this.encoder(this.moduleTemplate({ vendor, extension }))
                 );
             } catch {
                 reject('Error creating extension files');
@@ -154,7 +159,7 @@ class Magento {
         for(let reg in templates) {
             const regexp = new RegExp(reg);
             if (regexp.test(textDocument.fileName)) {
-                await fs.writeFile(textDocument.uri, this.encoder.encode(templates[reg](data)));
+                await fs.writeFile(textDocument.uri, this.encoder(templates[reg](data)));
                 break;
             }
         }
@@ -209,7 +214,7 @@ class Magento {
      * @param {string} varName
      * @memberof Magento
      */
-    injectDependency(textEditor: TextEditor, className: string, varName: string ) {
+    injectDependency(textEditor: TextEditor, className: string, varName: string) {
         let document = textEditor.document;
         if (textEditor.document.languageId !== 'php') {
             throw new Error('Only supported for PHP files');
@@ -376,6 +381,103 @@ class Magento {
         }
         varname = varname.replace(/Interface$/, '');
         return camelCase(varname);
+    }
+
+    /**
+     * Returns array of event names
+     *
+     * @returns {string[]}
+     * @memberof Magento
+     */
+    getEvents(): string[] {
+        return ['sales_quote_remove_item', 'sales_quote_add_item', 'sales_quote_product_add_after'];
+    }
+
+    /**
+     * Creates observer class name from event name
+     *
+     * @param {string} eventName
+     * @param {string} observerName
+     * @returns {string}
+     * @memberof Magento
+     */
+    suggestObserverName(eventName: string): string {
+        return camelCase(eventName);
+    }
+
+    async addObserver(textEditor: TextEditor, eventName: string, observerName: string): Promise<void> {
+        let extensionData = this.getUriData(textEditor.document.uri);
+        if (!workspace.workspaceFolders) {
+            throw new Error('No open workspace');
+        }
+        let eventsXmlUri = this.appendUri(workspace.workspaceFolders[0].uri, 'app', 'code', extensionData.vendor, extensionData.extension, 'etc', 'events.xml');
+
+        let edit = new WorkspaceEdit();
+
+        edit.createFile(eventsXmlUri, { ignoreIfExists: true });
+
+        try {
+            var stats = await fs.stat(eventsXmlUri);
+        } catch {
+            let eventsXml = require('../templates/etc/events.xml')(Object.assign({ eventName, observerName }, extensionData));
+            try {
+                await fs.writeFile(eventsXmlUri, this.encoder(eventsXml));
+                // don't need to wait for document to open
+                workspace.openTextDocument(eventsXmlUri);
+            } catch (e) {
+                console.log(e);
+                throw new Error('Can\'t create '+eventsXmlUri.toString(true));
+            }
+            return;
+        }
+        if (stats.type === FileType.File) {
+            let eventsXml = textDocument.getText();
+            try {
+                var xml = convert.xml2js(eventsXml, {
+                    compact: false,
+                    alwaysChildren: true,
+                });
+            } catch (e) {
+                console.log(e);
+                throw new Error('Error parsing '+eventsXmlUri.toString(true));
+            }
+            console.log(xml);
+            let configNode;
+            for (let element of xml.elements) {
+                if (element.type === 'element' && element.name === 'config') {
+                    configNode = element;
+                }
+            }
+            if (configNode) {
+                    configNode.elements.push({
+                    type: 'element',
+                    name: 'event',
+                    attributes: { name: eventName },
+                    elements: [{
+                        type: 'element',
+                        name: 'observer',
+                        attributes: {
+                            name: `${extensionData.vendor}_${extensionData.extension}_${observerName}`,
+                            instance: `${extensionData.vendor}\\${extensionData.extension}\\Observer\\${observerName}`,
+                        }
+                    }]
+                });
+
+                let eventsXml = convert.js2xml(xml, {
+                    spaces: this.indentCode(textEditor, 1),
+                    compact: false,
+                });
+                try {
+                    await fs.writeFile(eventsXmlUri, this.encoder(eventsXml));
+                } catch {
+                    throw new Error('Error saving '+eventsXmlUri.toString(true));
+                }
+            } else {
+                throw new Error('Error parsing '+eventsXmlUri.toString(true));
+            }
+        } else {
+            throw new Error(eventsXmlUri.toString(true)+' is not a file');
+        }
     }
 }
 
