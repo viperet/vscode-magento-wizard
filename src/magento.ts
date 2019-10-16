@@ -1,8 +1,9 @@
-import { workspace, Uri, FileType, TextDocument, TextEditor, Position, Range, WorkspaceEdit, DocumentLink, window } from 'vscode';
+import { workspace, Uri, FileType, TextDocument, TextEditor, Position, Range, WorkspaceEdit, DocumentLink, window, QuickPickItem } from 'vscode';
 import { posix } from 'path';
 import * as Handlebars from 'handlebars';
 import Ast from './ast';
 import classList from './classlist';
+import eventsList from './eventsList';
 import camelCase from 'camelcase';
 import * as convert  from 'xml-js';
 
@@ -74,7 +75,7 @@ class Magento {
         let data: UriData = { vendor: '', extension: '', type: '', namespace: '', name: '', ext: '' };
         let matches = uri.path.match(/\/app\/code\/(?<vendor>\w+)\/(?<extension>\w+)\/(?<path>.*\/)?(?<fileName>\w+)\.(?<ext>\w+)$/);
         if (matches && matches.groups) {
-            let path = matches.groups.path.split('/').filter(Boolean);
+            let path = matches.groups.path ? matches.groups.path.split('/').filter(Boolean) : '';
             data.vendor = matches.groups.vendor;
             data.extension = matches.groups.extension;
             data.name = matches.groups.fileName;
@@ -95,7 +96,11 @@ class Magento {
      */
     async getVendors(): Promise<string[]> {
         const codeUri = this.getAppCodeUri();
-        const dir = await fs.readDirectory(codeUri);
+        var dir:[string, FileType][] = [];
+        try {
+             dir = await fs.readDirectory(codeUri);
+        } catch {
+        }
 
         return dir
             .filter(entry => { return entry[1] === FileType.Directory; })
@@ -386,11 +391,23 @@ class Magento {
     /**
      * Returns array of event names
      *
-     * @returns {string[]}
+     * @returns any
      * @memberof Magento
      */
-    getEvents(): string[] {
-        return ['sales_quote_remove_item', 'sales_quote_add_item', 'sales_quote_product_add_after'];
+    getEvents(): QuickPickItem[] {
+        let values: QuickPickItem[] = [];
+        for(let eventName in eventsList) {
+            let data: string[] = [];
+            for (let dataName in eventsList[eventName].data) {
+                data.push(dataName);
+            }
+            values.push({
+                label: eventName,
+                description: eventsList[eventName].description,
+                detail: data.join(", "),
+            });
+        }
+        return values;
     }
 
     /**
@@ -448,16 +465,23 @@ class Magento {
         }
     }
 
+    relativePath(uri: Uri): string {
+        return workspace.asRelativePath(uri);
+    }
+
     async addObserver(textEditor: TextEditor, eventName: string, observerName: string): Promise<void> {
         let extensionData = this.getUriData(textEditor.document.uri);
         if (!workspace.workspaceFolders) {
             throw new Error('No open workspace');
         }
+        if (!extensionData.vendor || !extensionData.extension) {
+            throw new Error('Please open any file from Magento 2 extension, so MagentoWizard will know where you want to add new observer');
+        }
         let eventsXmlUri = this.appendUri(workspace.workspaceFolders[0].uri, 'app', 'code', extensionData.vendor, extensionData.extension, 'etc', 'events.xml');
         let observerPhpUri = this.appendUri(workspace.workspaceFolders[0].uri, 'app', 'code', extensionData.vendor, extensionData.extension, 'Observer',  ...(observerName+'.php').split('\\'));
 
         if (await this.fileExists(observerPhpUri)) {
-            throw new Error(observerPhpUri.toString(true)+' already exists');
+            throw new Error(this.relativePath(observerPhpUri)+' already exists');
         }
 
         let stats;
@@ -470,7 +494,7 @@ class Magento {
         }
         if (stats) {
             if (stats.type !== FileType.File) {
-                throw new Error(eventsXmlUri.toString(true)+' is not a file');
+                throw new Error(this.relativePath(eventsXmlUri)+' is not a file');
             }
             let eventsXml = await this.readFile(eventsXmlUri);
             try {
@@ -480,7 +504,7 @@ class Magento {
                 });
             } catch (e) {
                 console.log(e);
-                throw new Error('Error parsing '+eventsXmlUri.toString(true));
+                throw new Error('Error parsing '+this.relativePath(eventsXmlUri));
             }
             console.log(xml);
             let configNode;
@@ -510,14 +534,15 @@ class Magento {
                 });
                 await this.writeFile(eventsXmlUri, eventsXml);
             } else {
-                throw new Error('Error parsing '+eventsXmlUri.toString(true));
+                throw new Error('Error parsing '+this.relativePath(eventsXmlUri));
             }
         }
 
-        let observerPhp = require('../templates/observer.php')(this.getUriData(observerPhpUri));
-        this.writeFile(observerPhpUri, observerPhp);
+        let observerData = Object.assign({ data: eventsList[eventName].data }, this.getUriData(observerPhpUri));
+        let observerPhp = require('../templates/observer.php')(observerData);
+        await this.writeFile(observerPhpUri, observerPhp);
+        await window.showTextDocument(observerPhpUri);
     }
 }
-
 
 export default new Magento();

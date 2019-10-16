@@ -14,6 +14,8 @@ When editing class file you can inject new dependency by pressing `F1` and using
 
 ![Dependency Injection ](https://github.com/viperet/vscode-magento-wizard/raw/master/images/dependency-injection.gif)
 
+You can easily add observer for any event using "MagentoWizard: Add Observer" command, MagentoWizard even knows what data is passed to observers for some popular events.
+
 ### Planned features
 
 - [x] Extension creation
@@ -21,7 +23,7 @@ When editing class file you can inject new dependency by pressing `F1` and using
 - [x] Injecting dependencies
   - [ ] Better placement of the assignments
   - [ ] Autocomple classes/interfaces from the current extension
-- [ ] Adding Observer
+- [x] Adding Observer
 - [ ] Adding Plugin
 - [ ] Adding route, controller, block, layout, template
 - [ ] Adding custom attribute to products, categories, orders, customers, etc.
@@ -29,8 +31,10 @@ When editing class file you can inject new dependency by pressing `F1` and using
 
 ## Release Notes
 
-First public release of the extension
+### 1.1.0
+
+Adding observers using "MagentoWizard: Add Observer" command
 
 ### 1.0.1
 
-Initial release of MagentoWizard
+First public release of the extension

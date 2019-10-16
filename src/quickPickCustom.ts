@@ -1,9 +1,9 @@
-import { window } from 'vscode';
+import { window, QuickPickItem } from 'vscode';
 
 
 
 
-export default function createQuickPickCustom(title: string, values:string[] | Promise<string[]>): Promise<string> {
+export default function createQuickPickCustom(title: string, values:string[] | Promise<string[]> | QuickPickItem[]): Promise<string> {
     let selection: Promise<string> = new Promise((resolve, reject) => {
 		const quickPick = window.createQuickPick();
 		quickPick.title = title;
@@ -26,7 +26,13 @@ export default function createQuickPickCustom(title: string, values:string[] | P
 		quickPick.onDidHide(() => quickPick.dispose());
         quickPick.show();
         if (values instanceof Array) {
-            quickPick.items = values.map(item => { return { label: item };});
+            if (values.length > 0 && typeof values[0] === 'string') {
+                // @ts-ignore
+                quickPick.items = values.map(item => { return { label: item };});
+            } else {
+                // @ts-ignore
+                quickPick.items = values;
+            }
         } else if (values instanceof Promise) {
             quickPick.busy = true;
             values.then(items => {

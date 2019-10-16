@@ -22,7 +22,7 @@ export function activate(context: vscode.ExtensionContext) {
                 var varName = await vscode.window.showInputBox({
                     prompt: 'Enter variable name',
                     value: magento.suggestVariableName(className),
-                    validateInput: value => { return !value.match(/\$?[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*/) ? 'Incorrect variable name' : '' ; },
+                    validateInput: value => { return !value.match(/^\$?[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*$/) ? 'Incorrect variable name' : '' ; },
                 });
                 if (varName) {
                     // strip $ from the variable name
@@ -45,13 +45,13 @@ export function activate(context: vscode.ExtensionContext) {
                 var observerName = await vscode.window.showInputBox({
                     prompt: 'Enter observer class name',
                     value: magento.suggestObserverName(eventName),
-                    validateInput: value => { return !value.match(/[a-z][a-zA-Z0-9_\x7f-\xff]*/) ? 'Incorrect variable name' : '' ; },
+                    validateInput: value => { return !value.match(/^[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*(\\[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*)*$/) ? 'Incorrect class name' : '' ; },
                 });
                 if (observerName) {
                     try {
-                        await magento.addObserver(textEditor, eventName, observerName);
+                        await magento.addObserver(textEditor!, eventName, observerName!);
                     } catch (e) {
-                        vscode.window.showErrorMessage(e.message);
+                        vscode.window.showErrorMessage(e.message, { modal: true });
                     }
                 }
             }

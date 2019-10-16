@@ -23,8 +23,11 @@
 		"Other"
 	],
 	"activationEvents": [
-		"onCommand:extension.newExtension",
-		"workspaceContains:app/etc/env.php"
+		"onCommand:magentowizard.newExtension",
+		"onCommand:magentowizard.injectDependency",
+		"onCommand:magentowizard.addObserver",
+		"workspaceContains:/app/etc/env.php",
+		"workspaceContains:/app/etc/di.xml"
 	],
 	"main": "./dist/extension.js",
 	"contributes": {
