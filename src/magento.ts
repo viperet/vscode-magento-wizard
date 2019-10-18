@@ -116,17 +116,22 @@ class Magento {
         const extensionUri = this.appendUri(codeUri, vendor, extension);
         const registrationPhpUri = this.appendUri(extensionUri, 'registration.php');
         const moduleXmlUri = this.appendUri(extensionUri, 'etc', 'module.xml');
-        const edit = new WorkspaceEdit();
-
-        edit.createFile(registrationPhpUri, { overwrite: false, ignoreIfExists: false });
-        edit.createFile(moduleXmlUri, { overwrite: false, ignoreIfExists: false });
-        edit.insert(registrationPhpUri, new Position(0,0), require('../templates/registration.php'));
-        edit.insert(moduleXmlUri, new Position(0,0), require('../templates/etc/module.xml'));
-
         try {
-            await workspace.applyEdit(edit);
-        } catch (e) {
-            console.log(e);
+            await fs.createDirectory(extensionUri);
+            await fs.createDirectory(this.appendUri(extensionUri, 'etc'));
+        } catch {
+            throw new Error('Error creating extension folder');
+        }
+        try {
+            await fs.writeFile(
+                registrationPhpUri,
+                this.encoder(require('../templates/registration.php')({ vendor, extension }))
+            );
+            await fs.writeFile(
+                moduleXmlUri,
+                this.encoder(require('../templates/etc/module.xml')({ vendor, extension }))
+            );
+        } catch {
             throw new Error('Error creating extension files');
         }
         await workspace.openTextDocument(moduleXmlUri);
