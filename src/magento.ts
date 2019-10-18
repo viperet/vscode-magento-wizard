@@ -33,14 +33,10 @@ interface Insert {
 }
 
 class Magento {
-    registrationTemplate: Handlebars.TemplateDelegate;
-    moduleTemplate: Handlebars.TemplateDelegate;
     encoder: (input?: string | undefined) => Uint8Array;
     decoder: (input?: Uint8Array | Uint8ClampedArray | Uint16Array | Uint32Array | Int8Array | Int16Array | Int32Array | Float32Array | Float64Array | DataView | ArrayBuffer | null | undefined, options?: any | undefined) => string;
 
     constructor() {
-        this.registrationTemplate = require('../templates/registration.php');
-        this.moduleTemplate = require('../templates/etc/module.xml');
         let encoder = new TextEncoder();
         this.encoder = encoder.encode.bind(encoder);
         let decoder = new TextDecoder();
@@ -116,31 +112,26 @@ class Magento {
      * @memberof Magento
      */
     async createExtension(vendor: string, extension: string): Promise<Uri> {
-        const result = new Promise<Uri>(async (resolve, reject) => {
-            const codeUri = this.getAppCodeUri();
-            const extensionUri = this.appendUri(codeUri, vendor, extension);
-            try {
-                await fs.createDirectory(extensionUri);
-                await fs.createDirectory(this.appendUri(extensionUri, 'etc'));
-            } catch {
-                reject('Error creating extension folder');
-            }
-            try {
-                await fs.writeFile(
-                    this.appendUri(extensionUri, 'registration.php'),
-                    this.encoder(this.registrationTemplate({ vendor, extension }))
-                );
-                await fs.writeFile(
-                    this.appendUri(extensionUri, 'etc', 'module.xml'),
-                    this.encoder(this.moduleTemplate({ vendor, extension }))
-                );
-            } catch {
-                reject('Error creating extension files');
-            }
-            resolve(extensionUri);
-        });
-        return result;
-    }
+        const codeUri = this.getAppCodeUri();
+        const extensionUri = this.appendUri(codeUri, vendor, extension);
+        const registrationPhpUri = this.appendUri(extensionUri, 'registration.php');
+        const moduleXmlUri = this.appendUri(extensionUri, 'etc', 'module.xml');
+        const edit = new WorkspaceEdit();
+
+        edit.createFile(registrationPhpUri, { overwrite: false, ignoreIfExists: false });
+        edit.createFile(moduleXmlUri, { overwrite: false, ignoreIfExists: false });
+        edit.insert(registrationPhpUri, new Position(0,0), require('../templates/registration.php'));
+        edit.insert(moduleXmlUri, new Position(0,0), require('../templates/etc/module.xml'));
+
+        try {
+            await workspace.applyEdit(edit);
+        } catch (e) {
+            console.log(e);
+            throw new Error('Error creating extension files');
+        }
+        await workspace.openTextDocument(moduleXmlUri);
+        return extensionUri;
+}
 
     /**
      * Adds template content to the newly created empty file
@@ -223,6 +214,9 @@ class Magento {
      * @memberof Magento
      */
     injectDependency(textEditor: TextEditor, className: string, varName: string) {
+        // strip $ from the variable name
+        varName = varName.startsWith('$') ? varName.substring(1) : varName;
+
         let document = textEditor.document;
         if (textEditor.document.languageId !== 'php') {
             throw new Error('Only supported for PHP files');

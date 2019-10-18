@@ -9,7 +9,12 @@ export function activate(context: vscode.ExtensionContext) {
             let vendor = await createQuickPickCustom('Please select Vendor', vendors);
             var extension = await vscode.window.showInputBox({ placeHolder: 'Enter Extension Name'});
             if (extension) {
-                await magento.createExtension(vendor, extension);
+                try {
+                    await magento.createExtension(vendor, extension);
+                } catch (e) {
+                    vscode.window.showErrorMessage(e.message);
+                }
+
                 vscode.window.showInformationMessage(`Created extension ${vendor}_${extension}`);
             }
         } while (extension === undefined);
@@ -25,9 +30,6 @@ export function activate(context: vscode.ExtensionContext) {
                     validateInput: value => { return !value.match(/^\$?[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*$/) ? 'Incorrect variable name' : '' ; },
                 });
                 if (varName) {
-                    // strip $ from the variable name
-                    varName = varName.startsWith('$') ? varName.substring(1) : varName;
-
                     try {
                         magento.injectDependency(textEditor, className, varName);
                     } catch(e) {
@@ -51,18 +53,12 @@ export function activate(context: vscode.ExtensionContext) {
                     try {
                         await magento.addObserver(textEditor!, eventName, observerName!);
                     } catch (e) {
-                        vscode.window.showErrorMessage(e.message, { modal: true });
+                        vscode.window.showErrorMessage(e.message);
                     }
                 }
             }
         }
     }));
-    // context.subscriptions.push(vscode.workspace.onDidOpenTextDocument(textDocument => {
-    //     magento.applyTemplate(textDocument);
-    // }));
-    // context.subscriptions.push(vscode.workspace.onDidSaveTextDocument(textDocument => {
-    //     magento.applyTemplate(textDocument);
-    // }));
 
     let lastOpenedDocument: vscode.TextDocument | undefined;
     context.subscriptions.push(vscode.workspace.onDidOpenTextDocument(textDocument => {
