@@ -57,11 +57,18 @@ export function activate(context: vscode.ExtensionContext) {
             }
         }
     }));
-    context.subscriptions.push(vscode.workspace.onDidOpenTextDocument(textDocument => {
-        magento.applyTemplate(textDocument);
-    }));
-    context.subscriptions.push(vscode.workspace.onDidSaveTextDocument(textDocument => {
-        magento.applyTemplate(textDocument);
+    // context.subscriptions.push(vscode.workspace.onDidOpenTextDocument(textDocument => {
+    //     magento.applyTemplate(textDocument);
+    // }));
+    // context.subscriptions.push(vscode.workspace.onDidSaveTextDocument(textDocument => {
+    //     magento.applyTemplate(textDocument);
+    // }));
+
+    context.subscriptions.push(vscode.window.onDidChangeVisibleTextEditors(textEditors => {
+        console.log(vscode.window.activeTextEditor);
+        if (vscode.window.activeTextEditor) {
+            magento.applyTemplate(vscode.window.activeTextEditor);
+        }
     }));
 }
 

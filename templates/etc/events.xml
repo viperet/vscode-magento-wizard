@@ -1,6 +1,12 @@
 <?xml version="1.0"?>
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:Event/etc/events.xsd">
-    <event name="{{default eventName 'event_name'}}">
-        <observer name="{{vendor}}_{{extension}}_{{default observerName 'observer'}}" instance="{{vendor}}\\{{extension}}\Observer\\{{default observerName 'eventObserver'}}" />
+{{#if eventName}}
+    <event name="{{eventName}}">
+        <observer name="{{vendor}}_{{extension}}_{{observerName}}" instance="{{vendor}}\\{{extension}}\Observer\\{{observerName}}" />
     </event>
+{{else}}
+    <event name="${1:event_name}">
+        <observer name="{{vendor}}_{{extension}}_${2:Observer}" instance="{{vendor}}\\{{extension}}\Observer\\${2:Observer}" />
+    </event>
+{{/if}}
 </config>

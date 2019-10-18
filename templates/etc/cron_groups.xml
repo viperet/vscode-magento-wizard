@@ -1,0 +1,19 @@
+<?xml version="1.0" ?>
+<config>
+	<group id="${1:group_name}">
+		<!-- Frequency (in minutes) that schedules are written to the cron_schedule table -->
+		<schedule_generate_every>1</schedule_generate_every>
+		<!-- Time (in minutes) in advance that schedules are written to the cron_schedule table -->
+		<schedule_ahead_for>4</schedule_ahead_for>
+		<!-- Window of time (in minutes) that cron job must start or will be considered missed (“too late” to run) -->
+		<schedule_lifetime>2</schedule_lifetime>
+		<!-- Time (in minutes) that cron history is kept in the database -->
+		<history_cleanup_every>10</history_cleanup_every>
+		<!-- Time (in minutes) that the record of successfully completed cron jobs are kept in the database -->
+		<history_success_lifetime>60</history_success_lifetime>
+		<!-- Time (in minutes) that the record of failed cron jobs are kept in the database -->
+		<history_failure_lifetime>600</history_failure_lifetime>
+		<!-- Run this crongroup’s jobs in a separate php process -->
+		<use_separate_process>1</use_separate_process>
+	</group>
+</config>

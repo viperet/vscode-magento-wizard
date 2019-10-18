@@ -1,4 +1,4 @@
-import { workspace, Uri, FileType, TextDocument, TextEditor, Position, Range, WorkspaceEdit, DocumentLink, window, QuickPickItem } from 'vscode';
+import { workspace, Uri, FileType, TextDocument, TextEditor, Position, Range, WorkspaceEdit, DocumentLink, window, QuickPickItem, SnippetString } from 'vscode';
 import { posix } from 'path';
 import * as Handlebars from 'handlebars';
 import Ast from './ast';
@@ -150,7 +150,8 @@ class Magento {
      * @returns {Promise<undefined>}
      * @memberof Magento
      */
-    async applyTemplate(textDocument: TextDocument): Promise<void> {
+    async applyTemplate(textEditor: TextEditor): Promise<void> {
+        const textDocument = textEditor.document;
         if (textDocument.getText().length !== 0) {
             // File is not empty, stop processing
             return;
@@ -164,7 +165,9 @@ class Magento {
         for(let reg in templates) {
             const regexp = new RegExp(reg);
             if (regexp.test(textDocument.fileName)) {
-                await fs.writeFile(textDocument.uri, this.encoder(templates[reg](data)));
+                // await fs.writeFile(textDocument.uri, this.encoder(templates[reg](data)));
+                const snippet = new SnippetString(templates[reg](data));
+                textEditor.insertSnippet(snippet);
                 break;
             }
         }

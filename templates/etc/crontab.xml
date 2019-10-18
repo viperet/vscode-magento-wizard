@@ -1,8 +1,8 @@
 <?xml version="1.0" ?>
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Cron:etc/crontab.xsd">
-	<group id="default">
-		<job instance="{{ vendor }}\{{ extension }}\Cron\Test" method="execute" name="{{ vendor }}_{{ extension }}_test">
-			<schedule>* * * * *</schedule>
+	<group id="${1:default}">
+		<job instance="{{ vendor }}\{{ extension }}\Cron\\${2:Job}" method="execute" name="${2:{{ vendor }}_{{ extension }}_job}">
+			<schedule>$0* * * * *</schedule>
 		</job>
 	</group>
 </config>
