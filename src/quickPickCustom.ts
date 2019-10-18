@@ -6,7 +6,20 @@ import { window, QuickPickItem } from 'vscode';
 export default function createQuickPickCustom(title: string, values:string[] | Promise<string[]> | QuickPickItem[]): Promise<string> {
     let selection: Promise<string> = new Promise((resolve, reject) => {
 		const quickPick = window.createQuickPick();
+        let items: QuickPickItem[];
 		quickPick.title = title;
+		quickPick.onDidChangeValue(value => {
+            // @ts-ignore
+            items = items.filter(item => !item.custom);
+            if (value.trim() && !quickPick.items.find(item => item.label === value)) {
+                items.unshift({
+                    label: value,
+                    // @ts-ignore
+                    custom: true,
+                });
+                quickPick.items = items;
+            }
+        });
 		quickPick.onDidAccept(() => {
 			if(quickPick.value !== '') {
 				// New value entered
@@ -28,15 +41,15 @@ export default function createQuickPickCustom(title: string, values:string[] | P
         if (values instanceof Array) {
             if (values.length > 0 && typeof values[0] === 'string') {
                 // @ts-ignore
-                quickPick.items = values.map(item => { return { label: item };});
+                quickPick.items = items = values.map(item => ({ label: item }));
             } else {
                 // @ts-ignore
-                quickPick.items = values;
+                quickPick.items = items = values;
             }
         } else if (values instanceof Promise) {
             quickPick.busy = true;
-            values.then(items => {
-                quickPick.items = items.map(item => { return { label: item };});
+            values.then(values => {
+                quickPick.items = items = values.map(item => ({ label: item }));
                 quickPick.busy = false;
             }).catch(() => {
                 reject();
