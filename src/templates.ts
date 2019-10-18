@@ -19,6 +19,7 @@ const templates: { [key: string]: string } = {
     '\/Setup\/Recurring.php$': require('../templates/Setup/Recurring.php'),
     '\/Setup\/UpgradeData.php$': require('../templates/Setup/UpgradeData.php'),
     '\/Setup\/UpgradeSchema.php$': require('../templates/Setup/UpgradeSchema.php'),
+    '.php$': require('../templates/class.php'),
 };
 
 export default templates;

@@ -64,11 +64,17 @@ export function activate(context: vscode.ExtensionContext) {
     //     magento.applyTemplate(textDocument);
     // }));
 
+    let lastOpenedDocument: vscode.TextDocument | undefined;
+    context.subscriptions.push(vscode.workspace.onDidOpenTextDocument(textDocument => {
+        lastOpenedDocument = textDocument;
+    }));
     context.subscriptions.push(vscode.window.onDidChangeVisibleTextEditors(textEditors => {
         console.log(vscode.window.activeTextEditor);
-        if (vscode.window.activeTextEditor) {
-            magento.applyTemplate(vscode.window.activeTextEditor);
+        const activeEditor = vscode.window.activeTextEditor;
+        if (lastOpenedDocument && activeEditor && activeEditor.document.uri.toString() === lastOpenedDocument.uri.toString()) {
+            magento.applyTemplate(activeEditor);
         }
+        lastOpenedDocument = undefined;
     }));
 }
 

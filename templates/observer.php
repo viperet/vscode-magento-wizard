@@ -15,7 +15,7 @@ class {{ name }} implements \Magento\Framework\Event\ObserverInterface
         ${{@key}} = $observer->getData('{{@key}}');
         {{/each}}
         {{else}}
-        $myEventData = $observer->getData('myEventData');
+        $${1:myEventData} = $observer->getData('${1:myEventData}');$0
         {{/if}}
     }
 }

@@ -20,7 +20,7 @@ class {{ name }} extends \Magento\Framework\App\Action\Action
         return parent::__construct($context);
     }
     /**
-     * View  page action
+     * View page action
      *
      * @return \Magento\Framework\Controller\ResultInterface
      */

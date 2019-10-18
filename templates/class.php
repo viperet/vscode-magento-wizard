@@ -1,7 +1,7 @@
 <?php
 namespace {{ namespace }};
 
-class {{ name }} extends \Magento\Framework\Model\AbstractModel
+class {{ name }}
 {
     public function __construct()
     {
