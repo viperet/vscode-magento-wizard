@@ -7,6 +7,7 @@ const templates: { [key: string]: string } = {
     'routes\.xml$': require('../templates/etc/routes.xml'),
     '\/etc\/((frontend|adminhtml)\/)?events\.xml$': require('../templates/etc/events.xml'),
     '\/etc\/((frontend|adminhtml)\/)?config\.xml$': require('../templates/etc/config.xml'),
+    '\/etc\/frontend\/sections\.xml$': require('../templates/etc/sections.xml'),
     '\/etc\/(adminhtml\/)?system\.xml$': require('../templates/etc/system.xml'),
     '\/view\/(frontend|adminhtml)\/layout\/.*\.xml$': require('../templates/layout.xml'),
 

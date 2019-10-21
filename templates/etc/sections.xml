@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Customer:etc/sections.xsd">
+    <action name="${1:frontname/action/index}">
+        <section name="${2|cart,checkout-data,compare-products,checkout-fields,last-ordered-items,messages,instant-purchase,wishlist|}"/>
+    </action>
+</config>
