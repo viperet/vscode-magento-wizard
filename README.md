@@ -36,7 +36,8 @@ You can easily add observer for any event using "MagentoWizard: Add Observer" co
 
 ### 1.1.1
 
-New templates for config.xml, cron_groups.xml, systems.xml. Improved all configs with snippet placeholders.
+New templates for config.xml, cron_groups.xml, systems.xml, sections.xml. Improved all templates with snippet placeholders.
+Fixed bug which prevented from entering new vendor name. Improved commands.
 
 ### 1.1.0
 
