@@ -12,7 +12,11 @@ const fs = workspace.fs;
 import { TextEncoder, TextDecoder } from 'util';
 import * as Parser from 'php-parser';
 
-interface UriData {
+export interface ExtensionInfo {
+    vendor: string;
+    extension: string;
+}
+export interface UriData extends ExtensionInfo {
     vendor: string;
     extension: string;
     type: string;
@@ -104,6 +108,26 @@ class Magento {
     }
 
     /**
+     * Returns list of existing Extesions from given  Vendor
+     *
+     * @param {string} vendor
+     * @returns {string[]}
+     * @memberof Magento
+     */
+    async getExtensions(vendor: string): Promise<string[]> {
+        const vendorUri = this.appendUri(this.getAppCodeUri(), vendor);
+        var dir:[string, FileType][] = [];
+        try {
+             dir = await fs.readDirectory(vendorUri);
+        } catch {
+        }
+
+        return dir
+            .filter(entry => { return entry[1] === FileType.Directory; })
+            .map(entry => { return entry[0]; });
+    }
+
+    /**
      * Creates new Magento 2 extension
      *
      * @param {string} vendor extension Vendor name
@@ -179,7 +203,10 @@ class Magento {
      * @returns {string}
      * @memberof Magento
      */
-    private indentCode(textEditor: TextEditor, indent: number): string {
+    private indentCode(textEditor: TextEditor | undefined, indent: number): string {
+        if (!textEditor) {
+            return " ".repeat(indent * 4);
+        }
         if (textEditor.options.insertSpaces) {
             return " ".repeat(indent * (textEditor.options.tabSize as number));
         } else {
@@ -218,20 +245,13 @@ class Magento {
      * @param {string} varName
      * @memberof Magento
      */
-    injectDependency(textEditor: TextEditor, className: string, varName: string) {
+    async injectDependency(textEditor: TextEditor, className: string, varName: string): Promise<void> {
         // strip $ from the variable name
         varName = varName.startsWith('$') ? varName.substring(1) : varName;
-
         let document = textEditor.document;
-        if (textEditor.document.languageId !== 'php') {
-            throw new Error('Only supported for PHP files');
-        }
-        let data = this.getUriData(textEditor.document.uri);
-        if (!data.vendor || !data.extension) {
-            throw new Error('Not a Magento 2 extension');
-        }
+        let data = this.getUriData(document.uri);
         let ast = new Ast();
-        ast.parseCode(textEditor.document.getText(), data.name+'.'+data.ext);
+        ast.parseCode(document.getText(), data.name+'.'+data.ext);
         let classNode = ast.findClass(data.name);
         if (!classNode) {
             throw new Error(`Can't find class '${data.name}'`);
@@ -352,16 +372,18 @@ class Magento {
             column: assignmentPosition.character,
             text: this.indentCode(textEditor, 2) + `$this->${varName} = $${varName};\n`,
         });
-        textEditor.edit(editBuilder => {
-            for(let insert of inserts) {
-                editBuilder.insert(new Position(insert.line, insert.column), insert.text);
-            }
-        }).then(completed => {
-
-        }, reason => {
-            throw new Error('Can\'t apply edits: ' + reason);
-        });
-
+        try {
+            var result = await textEditor.edit(editBuilder => {
+                for(let insert of inserts) {
+                    editBuilder.insert(new Position(insert.line, insert.column), insert.text);
+                }
+            });
+        } catch (e) {
+            throw new Error('Can\'t apply edits');
+        }
+        if (!result) {
+            throw new Error('Can\'t apply edits');
+        }
     }
 
     /**
@@ -471,13 +493,9 @@ class Magento {
         return workspace.asRelativePath(uri);
     }
 
-    async addObserver(textEditor: TextEditor, eventName: string, observerName: string): Promise<void> {
-        let extensionData = this.getUriData(textEditor.document.uri);
+    async addObserver(extensionData: ExtensionInfo, eventName: string, observerName: string): Promise<void> {
         if (!workspace.workspaceFolders) {
             throw new Error('No open workspace');
-        }
-        if (!extensionData.vendor || !extensionData.extension) {
-            throw new Error('Please open any file from Magento 2 extension, so MagentoWizard will know where you want to add new observer');
         }
         let eventsXmlUri = this.appendUri(workspace.workspaceFolders[0].uri, 'app', 'code', extensionData.vendor, extensionData.extension, 'etc', 'events.xml');
         let observerPhpUri = this.appendUri(workspace.workspaceFolders[0].uri, 'app', 'code', extensionData.vendor, extensionData.extension, 'Observer',  ...(observerName+'.php').split('\\'));
@@ -531,7 +549,7 @@ class Magento {
                 });
 
                 let eventsXml = convert.js2xml(xml, {
-                    spaces: this.indentCode(textEditor, 1),
+                    spaces: this.indentCode(window.activeTextEditor, 1),
                     compact: false,
                 });
                 await this.writeFile(eventsXmlUri, eventsXml);
