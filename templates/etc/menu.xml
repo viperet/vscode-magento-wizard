@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Backend:etc/menu.xsd">
+    <menu>
+        <add id="{{vendor}}_{{extension}}::${1:menu_id}" title="${2:Menu item name}" module="{{vendor}}_{{extension}}" sortOrder="10" action="${3:frontname/controller/action}" resource="{{vendor}}_{{extension}}::${1:menu_id}"/>
+    </menu>
+</config>

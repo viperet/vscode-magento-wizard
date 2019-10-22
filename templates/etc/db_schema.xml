@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<schema xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:Setup/Declaration/Schema/etc/schema.xsd">
+    <table name="${1:table_name}" resource="default" engine="innodb" comment="${2:Table comment}">
+        <column xsi:type="${3|int,real,float,decimal,smallint,text,varchar,timestamp,datetime,date,boolean,varbinary,blob|}" name="${4:entity_id}" padding="11" unsigned="false" nullable="false" identity="true" comment=""/>
+        <column xsi:type="${5|int,real,float,decimal,smallint,text,varchar,timestamp,datetime,date,boolean,varbinary,blob|}" name="${6:another_column}" padding="11" unsigned="false" nullable="false" default="0" comment=""/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="${4:entity_id}"/>
+        </constraint>
+        <constraint xsi:type="unique" referenceId="${7:REFERENCE_ID}">
+            <column name="${4:entity_id}"/>
+            <column name="${6:another_column}"/>
+        </constraint>
+        <index referenceId="${8:INDEX_REFERENCE_ID}" indexType="btree">
+            <column name="${6:another_column}"/>
+        </index>
+    </table>
+</schema>

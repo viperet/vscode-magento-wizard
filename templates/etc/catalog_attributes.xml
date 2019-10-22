@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Catalog:etc/catalog_attributes.xsd">
+    <group name="${1|quote_item,catalog_category,catalog_product,wishlist_item,used_in_autogeneration,unassignable|}">
+        <attribute name="${2:attribute_name}"/>
+    </group>
+</config>

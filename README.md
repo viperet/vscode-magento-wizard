@@ -21,8 +21,8 @@ You can easily add observer for any event using "MagentoWizard: Add Observer" co
 - [x] Extension creation
 - [x] Populating created *.php, *.xml, *.js files by template contents based on their name and location
 - [x] Injecting dependencies
-  - [ ] Better placement of the assignments
-  - [X] Autocomple classes/interfaces from the current extension
+  - [x] Better placement of the assignments
+  - [x] Autocomple classes/interfaces from the current extension
   - [ ] Autocomple classes/interfaces from 'vendor'
 - [x] Adding Observer
 - [ ] Adding Plugin
@@ -34,6 +34,10 @@ You can easily add observer for any event using "MagentoWizard: Add Observer" co
 - [ ] More templates
 
 ## Release Notes
+
+### 1.1.3
+
+Added templates for catalog_attributes.xml, db_schema.xml, menu.xml, webapi.xml.
 
 ### 1.1.2
 
