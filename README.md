@@ -22,7 +22,8 @@ You can easily add observer for any event using "MagentoWizard: Add Observer" co
 - [x] Populating created *.php, *.xml, *.js files by template contents based on their name and location
 - [x] Injecting dependencies
   - [ ] Better placement of the assignments
-  - [ ] Autocomple classes/interfaces from the current extension
+  - [X] Autocomple classes/interfaces from the current extension
+  - [ ] Autocomple classes/interfaces from 'vendor'
 - [x] Adding Observer
 - [ ] Adding Plugin
 - [ ] Adding Route, Controller, Block, Layout, Template
@@ -33,6 +34,10 @@ You can easily add observer for any event using "MagentoWizard: Add Observer" co
 - [ ] More templates
 
 ## Release Notes
+
+### 1.1.2
+
+Added generation of composer.json when creating new extension. Support for multiple worspace folders. Added classes from app/code/ to Inject dependency list.
 
 ### 1.1.1
 
