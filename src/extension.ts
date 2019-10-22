@@ -8,26 +8,38 @@ async function getVendorExtension(options?: QuickPickCustomOptons): Promise<Exte
     }
     options.step = options.step || 1;
     options.totalSteps = options.totalSteps || 2;
+    let currentWorkspace: vscode.WorkspaceFolder | undefined;
+    if (!vscode.workspace.workspaceFolders) {
+        throw new Error('No workspace folders found');
+    }
+    currentWorkspace = vscode.workspace.workspaceFolders[0];
+    if (vscode.workspace.workspaceFolders.length > 1) {
+        currentWorkspace = await vscode.window.showWorkspaceFolderPick();
+    } else {
+        currentWorkspace = vscode.workspace.workspaceFolders[0];
+    }
+    if (!currentWorkspace) {
+        return undefined;
+    }
+    magento.folder = currentWorkspace;
     let vendors = magento.getVendors();
-    do {
-        let vendor = await createQuickPickCustom(vendors, Object.assign({}, options, { title: 'Please select Vendor' }));
-        let extension;
-        if (vendor) {
-            options.step++;
-            if (options.custom) {
+    let vendor = await createQuickPickCustom(vendors, Object.assign({}, options, { title: 'Please select Vendor' }));
+    let extension;
+    if (vendor) {
+        options.step++;
+        if (options.custom) {
 //                extension = await vscode.window.showInputBox({ placeHolder: 'Enter Extension Name'});
-                extension = await createQuickPickCustom([], Object.assign({}, options, { title: 'Enter Extension Name' }));
-            } else {
-                let extensions = magento.getExtensions(vendor);
-                extension = await createQuickPickCustom(extensions, Object.assign({}, options, { title: 'Please select Extension' }));
-            }
-            if (extension) {
-                return { vendor, extension };
-            }
+            extension = await createQuickPickCustom([], Object.assign({}, options, { title: 'Enter Extension Name' }));
         } else {
-            return undefined;
+            let extensions = magento.getExtensions(vendor);
+            extension = await createQuickPickCustom(extensions, Object.assign({}, options, { title: 'Please select Extension' }));
         }
-    } while (true);
+        if (extension) {
+            return { workspace: currentWorkspace, vendor, extension };
+        }
+    } else {
+        return undefined;
+    }
 }
 
 
@@ -54,6 +66,10 @@ export function activate(context: vscode.ExtensionContext) {
             if (!data.vendor || !data.extension) {
                 throw new Error('Not a Magento 2 extension file');
             }
+            let folder = vscode.workspace.getWorkspaceFolder(textEditor.document.uri);
+            if (folder) {
+                magento.folder = folder;
+            }
             if (textEditor) {
                 let className = await createQuickPickCustom(magento.getClasses(), { step: 1, totalSteps: 2, title: 'Please select class or interface to inject' });
                 if (className) {
@@ -77,9 +93,11 @@ export function activate(context: vscode.ExtensionContext) {
         try {
             let extensionData;
             if (textEditor) {
-                extensionData = magento.getUriData(textEditor.document.uri);
-                totalSteps = 2;
-                step = 1;
+                try {
+                    extensionData = magento.getUriData(textEditor.document.uri);
+                    totalSteps = 2;
+                    step = 1;
+                } catch {}
             }
             if (!extensionData || !extensionData.vendor || !extensionData.extension) {
                 totalSteps = 4;

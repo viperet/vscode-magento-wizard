@@ -11,10 +11,13 @@ export interface QuickPickCustomOptons extends QuickPickOptions {
 }
 
 
-export default function createQuickPickCustom(values:string[] | Thenable<string[]> | QuickPickItem[], options: QuickPickCustomOptons): Promise<string> {
+export default function createQuickPickCustom(
+        values:string[] | Thenable<string[]> | AsyncIterableIterator<string[]> | QuickPickItem[],
+        options: QuickPickCustomOptons
+    ): Promise<string> {
     let selection: Promise<string> = new Promise((resolve, reject) => {
         const quickPick = window.createQuickPick();
-        let items: QuickPickItem[];
+        let items: QuickPickItem[] = [];
         quickPick.ignoreFocusOut = true;
         Object.assign(quickPick, options);
         if (options.custom) {
@@ -66,6 +69,21 @@ export default function createQuickPickCustom(values:string[] | Thenable<string[
                 reject();
                 quickPick.hide();
             });
+        // @ts-ignore
+        } else if (typeof values[Symbol.asyncIterator] === 'function') {
+            function processChunk(chunk: AsyncIterableIterator<string[]>) {
+                chunk.next().then(data => {
+                    items.push(...data.value.map((item: string) => ({ label: item })));
+                    quickPick.items = items;
+                    if (data.done) {
+                        quickPick.busy = false;
+                    } else {
+                        processChunk(chunk);
+                    }
+                });
+            }
+            quickPick.busy = true;
+            processChunk(values as AsyncIterableIterator<string[]>);
         }
     });
     return selection;

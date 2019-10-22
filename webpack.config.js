@@ -22,7 +22,7 @@ const config = {
     },
     resolve: {
         // support reading TypeScript and JavaScript files, 📖 -> https://github.com/TypeStrong/ts-loader
-        extensions: ['.ts', '.js', '*.php', '*.xml'],
+        extensions: ['.ts', '.js', '*.php', '*.xml', '*.handlebars'],
         alias: {
             handlebars: 'handlebars/dist/handlebars.min.js'
         }

@@ -1,4 +1,4 @@
-import { workspace, Uri, FileType, TextDocument, TextEditor, Position, Range, WorkspaceEdit, DocumentLink, window, QuickPickItem, SnippetString } from 'vscode';
+import { workspace, Uri, FileType, TextDocument, TextEditor, Position, Range, WorkspaceFolder, DocumentLink, window, QuickPickItem, SnippetString, RelativePattern } from 'vscode';
 import { posix } from 'path';
 import * as Handlebars from 'handlebars';
 import Ast from './ast';
@@ -11,8 +11,10 @@ const fs = workspace.fs;
 
 import { TextEncoder, TextDecoder } from 'util';
 import * as Parser from 'php-parser';
+import { fstat } from 'fs';
 
 export interface ExtensionInfo {
+    workspace: WorkspaceFolder;
     vendor: string;
     extension: string;
 }
@@ -40,6 +42,9 @@ class Magento {
     encoder: (input?: string | undefined) => Uint8Array;
     decoder: (input?: Uint8Array | Uint8ClampedArray | Uint16Array | Uint32Array | Int8Array | Int16Array | Int32Array | Float32Array | Float64Array | DataView | ArrayBuffer | null | undefined, options?: any | undefined) => string;
 
+    // @ts-ignore
+    folder: WorkspaceFolder;
+
     constructor() {
         let encoder = new TextEncoder();
         this.encoder = encoder.encode.bind(encoder);
@@ -63,16 +68,26 @@ class Magento {
     /**
      * Returns Uri of the Magento 2 /app/code folder
      *
+     * @param {WorkspaceFolder} folder workspace folder to use
      * @returns {Uri}
      * @memberof Magento
      */
     getAppCodeUri(): Uri {
-        const rootUri = workspace.workspaceFolders![0].uri;
-        return this.appendUri(rootUri, 'app', 'code');
+        let uri = this.appendUri(this.folder.uri, 'app', 'code');
+        try {
+            fs.stat(uri);
+            return uri;
+        } catch {
+            throw new Error('There is no Magento folders in this workspace folder');
+        }
     }
 
     getUriData(uri: Uri): UriData {
-        let data: UriData = { vendor: '', extension: '', type: '', namespace: '', name: '', ext: '' };
+        let currentWorkspace = workspace.getWorkspaceFolder(uri);
+        if (!currentWorkspace) {
+            throw new Error('File not in the workspace (not saved yet?)');
+        }
+        let data: UriData = { workspace: currentWorkspace, vendor: '', extension: '', type: '', namespace: '', name: '', ext: '' };
         let matches = uri.path.match(/\/app\/code\/(?<vendor>\w+)\/(?<extension>\w+)\/(?<path>.*\/)?(?<fileName>\w+)\.(?<ext>\w+)$/);
         if (matches && matches.groups) {
             let path = matches.groups.path ? matches.groups.path.split('/').filter(Boolean) : '';
@@ -139,6 +154,7 @@ class Magento {
         const codeUri = this.getAppCodeUri();
         const extensionUri = this.appendUri(codeUri, vendor, extension);
         const registrationPhpUri = this.appendUri(extensionUri, 'registration.php');
+        const composerJsonUri = this.appendUri(extensionUri, 'composer.json');
         const moduleXmlUri = this.appendUri(extensionUri, 'etc', 'module.xml');
         try {
             await fs.createDirectory(extensionUri);
@@ -155,7 +171,12 @@ class Magento {
                 moduleXmlUri,
                 this.encoder(require('../templates/etc/module.xml')({ vendor, extension }))
             );
-        } catch {
+            await fs.writeFile(
+                composerJsonUri,
+                this.encoder(require('../templates/composer.handlebars')({ vendor, extension }))
+            );
+        } catch (e) {
+            console.log(e);
             throw new Error('Error creating extension files');
         }
         await workspace.openTextDocument(moduleXmlUri);
@@ -392,8 +413,24 @@ class Magento {
      * @returns {string[]}
      * @memberof Magento
      */
-    getClasses(): string[] {
-        return classList;
+    async * getClasses(): AsyncIterableIterator<string[]> {
+        yield classList;
+        // if workspace folder is not set - can't search for additional classes
+        if (!this.folder) {
+            return [];
+        }
+        let files = await workspace.findFiles(
+            new RelativePattern(this.folder, 'app/code/**/*.php'),
+            'register.php'
+        );
+        let extClasses: string[]  = [];
+        files.forEach(uri => {
+            let data = this.getUriData(uri);
+            if (data.vendor && data.extension && data.namespace && data.name) {
+                extClasses.push(`\\${data.vendor}\\${data.extension}\\${data.namespace}\\${data.name}`);
+            }
+        });
+        return extClasses;
     }
 
     /**
