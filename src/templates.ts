@@ -19,6 +19,7 @@ const templates: { [key: string]: string } = {
     '\/Controller\/.*\.php$': require('../templates/controller.php'),
     '\/Model\/.*\.php$': require('../templates/model.php'),
     '\/Observer\/.*\.php$': require('../templates/observer.php'),
+    '\/Console\/.*\.php$': require('../templates/command.php'),
     '\/Setup\/InstallData.php$': require('../templates/Setup/InstallData.php'),
     '\/Setup\/InstallSchema.php$': require('../templates/Setup/InstallSchema.php'),
     '\/Setup\/Recurring.php$': require('../templates/Setup/Recurring.php'),

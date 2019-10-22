@@ -213,7 +213,6 @@ class Magento {
         for(let reg in templates) {
             const regexp = new RegExp(reg);
             if (regexp.test(textDocument.fileName)) {
-                // await fs.writeFile(textDocument.uri, this.encoder(templates[reg](data)));
                 const snippet = new SnippetString(templates[reg](data));
                 textEditor.insertSnippet(snippet);
                 break;
