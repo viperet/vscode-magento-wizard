@@ -82,6 +82,13 @@ class Magento {
         }
     }
 
+    /**
+     * Get info (vendor, extension name, etc) from file
+     * of the Magento 2 extension. Only works for files
+     * in the /app/code/ folder
+     *
+     * @param uri Uri of the file of Magento 2 extension
+     */
     getUriData(uri: Uri): UriData {
         let currentWorkspace = workspace.getWorkspaceFolder(uri);
         if (!currentWorkspace) {
@@ -106,7 +113,7 @@ class Magento {
     /**
      * Returns list of existing Vendors
      *
-     * @returns {string[]}
+     * @returns {Promise<string[]>}
      * @memberof Magento
      */
     async getVendors(): Promise<string[]> {
@@ -359,22 +366,10 @@ class Magento {
                     if (
                         expression.left.kind === 'propertylookup' &&
                         expression.right.kind === 'variable' &&
-                        expression.right.name === previousArg.name
+                        expression.right.name as unknown as string === previousArg.name.name
                     ) {
                         // found assignment of the previous argument
-                        assignmentPosition = new Position(expression.loc.start.line-1, 0);
-                        break;
-                    }
-                } else if (expression.kind === 'expressionstatement') {
-                    expression = expression as Parser.ExpressionStatement;
-                    if (
-                        expression.expression.kind === 'call' &&
-                        (expression.expression as any).what.kind === 'parentreference' &&
-                        (expression.expression as any).offset.kind === 'identifier' &&
-                        (expression.expression as any).offset.name === '__construct'
-                    ) {
-                        // found call of the parent::__constructor()
-                        assignmentPosition = new Position(expression.loc.start.line-1, 0);
+                        assignmentPosition = new Position(expression.loc.start.line, 0);
                         break;
                     }
                 }
