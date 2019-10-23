@@ -37,7 +37,7 @@ You can easily add observer for any event using "MagentoWizard: Add Observer" co
 
 ### 1.1.3
 
-Added templates for catalog_attributes.xml, db_schema.xml, menu.xml, webapi.xml.
+Fixed bug in php templates. Added templates for catalog_attributes.xml, db_schema.xml, menu.xml, webapi.xml, console command.
 
 ### 1.1.2
 
