@@ -213,7 +213,9 @@ class Magento {
         for(let reg in templates) {
             const regexp = new RegExp(reg);
             if (regexp.test(textDocument.fileName)) {
-                const snippet = new SnippetString(templates[reg](data));
+                let templateText: string = templates[reg](data);
+                templateText = templateText.replace(/(\$[^{\d])/g, '\\$1');
+                const snippet = new SnippetString(templateText);
                 textEditor.insertSnippet(snippet);
                 break;
             }
