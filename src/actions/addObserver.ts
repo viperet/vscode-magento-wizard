@@ -1,4 +1,4 @@
-import { workspace, Uri, FileType, TextDocument, TextEditor, Position, Range, WorkspaceFolder, DocumentLink, window, QuickPickItem, SnippetString, RelativePattern } from 'vscode';
+import { workspace, FileType, window } from 'vscode';
 import * as convert  from 'xml-js';
 import eventsList from '../eventsList';
 import magento, { ExtensionInfo }  from '../magento';

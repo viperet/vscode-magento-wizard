@@ -1,5 +1,5 @@
-import { workspace, Uri, FileType, TextDocument, TextEditor, Position, Range, WorkspaceFolder, DocumentLink, window, QuickPickItem, SnippetString, RelativePattern } from 'vscode';
-import magento, { ExtensionInfo }  from '../magento';
+import { workspace, Uri } from 'vscode';
+import magento  from '../magento';
 const fs = workspace.fs;
 
 /**

@@ -1,8 +1,7 @@
-import { workspace, Uri, FileType, TextDocument, TextEditor, Position, Range, WorkspaceFolder, DocumentLink, window, QuickPickItem, SnippetString, RelativePattern } from 'vscode';
-import magento, { ExtensionInfo }  from '../magento';
+import { workspace, TextEditor, Position, Range } from 'vscode';
+import magento  from '../magento';
 import Ast from '../ast';
 import * as Parser from 'php-parser';
-const fs = workspace.fs;
 
 interface Insert {
     line: number;
