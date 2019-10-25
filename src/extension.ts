@@ -81,7 +81,7 @@ export function activate(context: vscode.ExtensionContext) {
                 magento.folder = folder;
             }
             if (textEditor) {
-                let className = await createQuickPickCustom(magento.getClasses(), { step: 1, totalSteps: 2, title: 'Please select class or interface to inject' });
+                let className = await createQuickPickCustom(magento.getClasses(data), { step: 1, totalSteps: 2, title: 'Please select class or interface to inject' });
                 if (className) {
                     var varName = await vscode.window.showInputBox({
                         prompt: 'Enter variable name',

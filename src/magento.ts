@@ -1,6 +1,5 @@
-import { workspace, Uri, FileType, TextDocument, TextEditor, Position, Range, WorkspaceFolder, DocumentLink, window, QuickPickItem, SnippetString, RelativePattern } from 'vscode';
+import { workspace, Uri, FileType, TextEditor, Position, Range, WorkspaceFolder, window, QuickPickItem, SnippetString, RelativePattern } from 'vscode';
 import { posix } from 'path';
-import * as Handlebars from 'handlebars';
 import classList from './classlist';
 import eventsList from './eventsList';
 import camelCase from 'camelcase';
@@ -8,21 +7,27 @@ import * as convert  from 'xml-js';
 const fs = workspace.fs;
 
 import { TextEncoder, TextDecoder } from 'util';
-import { fstat } from 'fs';
 
 export interface ExtensionInfo {
+    /** Workspace folder of the extension */
     workspace: WorkspaceFolder;
+    /** Vendor name */
     vendor: string;
+    /** Extension name */
     extension: string;
+    /** Extension folder path, relative to the workspace folder */
     extensionFolder: string;
+    /** Extenstion folder Uri */
     extensionUri: Uri;
 }
 export interface UriData extends ExtensionInfo {
-    vendor: string;
-    extension: string;
+    /** File type (model, controller, block, etc) */
     type: string;
+    /** File namespace  */
     namespace: string;
+    /** Filename */
     name: string;
+    /** Filename extension (php,xml,js) */
     ext: string;
 }
 
@@ -256,21 +261,34 @@ class Magento {
      * @returns {string[]}
      * @memberof Magento
      */
-    async * getClasses(): AsyncIterableIterator<string[]> {
+    async * getClasses(data: ExtensionInfo): AsyncIterableIterator<string[]> {
+        // return predefined Magento classes/interfaces
         yield classList;
         // if workspace folder is not set - can't search for additional classes
         if (!this.folder) {
             return [];
         }
+        // search for classes in the extension folder
+        return this.searchClasses(data.extensionFolder);
+
+        // search for classes in /app/code
+        //return this.searchClasses('app/code/');
+   }
+
+    async searchClasses(path: string): Promise<string[]> {
+        let pattern = new RelativePattern(
+                this.appendUri(this.folder.uri, path).fsPath, 
+                '**/*.php'
+            );
         let files = await workspace.findFiles(
-            new RelativePattern(this.folder, 'app/code/**/*.php'),
-            'register.php'
+            pattern,
+            '**/registration.php'
         );
         let extClasses: string[]  = [];
         for(let uri of files) {
             let data = await this.getUriData(uri);
             if (data.vendor && data.extension && data.namespace && data.name) {
-                extClasses.push(`\\${data.vendor}\\${data.extension}\\${data.namespace}\\${data.name}`);
+                extClasses.push(`\\${data.namespace}\\${data.name}`);
             }
         }
         return extClasses;
