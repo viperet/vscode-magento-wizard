@@ -1,22 +1,21 @@
 import { workspace, Uri, FileType, TextDocument, TextEditor, Position, Range, WorkspaceFolder, DocumentLink, window, QuickPickItem, SnippetString, RelativePattern } from 'vscode';
 import { posix } from 'path';
 import * as Handlebars from 'handlebars';
-import Ast from './ast';
 import classList from './classlist';
 import eventsList from './eventsList';
 import camelCase from 'camelcase';
 import * as convert  from 'xml-js';
-
 const fs = workspace.fs;
 
 import { TextEncoder, TextDecoder } from 'util';
-import * as Parser from 'php-parser';
 import { fstat } from 'fs';
 
 export interface ExtensionInfo {
     workspace: WorkspaceFolder;
     vendor: string;
     extension: string;
+    extensionFolder: string;
+    extensionUri: Uri;
 }
 export interface UriData extends ExtensionInfo {
     vendor: string;
@@ -27,15 +26,9 @@ export interface UriData extends ExtensionInfo {
     ext: string;
 }
 
-interface Docblock {
+export interface Docblock {
     description?: string;
     params: [string, string][];
-}
-
-interface Insert {
-    line: number;
-    column: number;
-    text: string;
 }
 
 class Magento {
@@ -55,13 +48,12 @@ class Magento {
     /**
      * Appends path components to the end of the Uri
      *
-     * @private
      * @param {Uri} uri
      * @param {...string[]} args path components to append
      * @returns {Uri} modified Uri object
      * @memberof Magento
      */
-    private appendUri(uri: Uri, ...args: string[]): Uri {
+    appendUri(uri: Uri, ...args: string[]): Uri {
         return uri.with({ path: posix.join(uri.path, ...args) });
     }
 
@@ -89,24 +81,54 @@ class Magento {
      *
      * @param uri Uri of the file of Magento 2 extension
      */
-    getUriData(uri: Uri): UriData {
+    async getUriData(uri: Uri): Promise<UriData> {
         let currentWorkspace = workspace.getWorkspaceFolder(uri);
         if (!currentWorkspace) {
             throw new Error('File not in the workspace (not saved yet?)');
         }
-        let data: UriData = { workspace: currentWorkspace, vendor: '', extension: '', type: '', namespace: '', name: '', ext: '' };
-        let matches = uri.path.match(/\/app\/code\/(?<vendor>\w+)\/(?<extension>\w+)\/(?<path>.*\/)?(?<fileName>\w+)\.(?<ext>\w+)$/);
+        let data: UriData = { workspace: currentWorkspace, vendor: '', extension: '', type: '', namespace: '', name: '', ext: '', extensionFolder: '', extensionUri: currentWorkspace.uri };
+        let relativePath = workspace.asRelativePath(uri);
+        let path: string[] = [];
+        // Extension in /app/code
+        let matches = relativePath.match(/^(?<rootPath>.*\/)?app\/code\/(?<vendor>\w+)\/(?<extension>\w+)\/(?<path>.*\/)?(?<fileName>\w+)\.(?<ext>\w+)$/);
         if (matches && matches.groups) {
-            let path = matches.groups.path ? matches.groups.path.split('/').filter(Boolean) : '';
+            path = matches.groups.path ? matches.groups.path.split('/').filter(Boolean) : [];
+            matches.groups.rootPath = matches.groups.rootPath || '';
             data.vendor = matches.groups.vendor;
             data.extension = matches.groups.extension;
             data.name = matches.groups.fileName;
             data.ext = matches.groups.ext;
-            if (path.length > 0) {
-                data.type = path[0].toLowerCase();
-                data.namespace = [data.vendor, data.extension, ...path].join('\\');
+            data.extensionFolder = `${matches.groups.rootPath}app/code/${data.vendor}/${data.extension}/`;
+        } else {
+            // Extension in /vendor
+            matches = relativePath.match(/^(?<rootPath>.*\/)?vendor\/(?<vendor>[A-Za-z0-9_-]+)\/(?<extension>[A-Za-z0-9_-]+)\/(?<path>.*\/)?(?<fileName>\w+)\.(?<ext>\w+)$/);
+            if (matches && matches.groups) {
+                path = matches.groups.path ? matches.groups.path.split('/').filter(Boolean) : [];
+                matches.groups.rootPath = matches.groups.rootPath || '';
+                data.name = matches.groups.fileName;
+                data.ext = matches.groups.ext;
+                data.extensionFolder = `${matches.groups.rootPath}vendor/${matches.groups.vendor}/${matches.groups.extension}/`;
+                try {
+                    const moduleXmlUri = this.appendUri(currentWorkspace.uri, data.extensionFolder, 'etc', 'module.xml');
+                    const moduleXml = await this.readFile(moduleXmlUri);
+                    var xml = convert.xml2js(moduleXml, {
+                        compact: true,
+                        ignoreComment: true,
+                    }) as any;
+                    const name = xml.config.module._attributes.name.split('_');
+                    data.vendor = name[0];
+                    data.extension = name[1];
+                } catch {
+                    throw new Error('Error parsing etc/module.xml');
+                }
             }
         }
+        data.namespace = data.vendor+'\\'+data.extension;
+        if (path && path.length > 0) {
+            data.type = path[0].toLowerCase();
+            data.namespace = [data.vendor, data.extension, ...path].join('\\');
+        }
+        data.extensionUri = this.appendUri(currentWorkspace.uri, data.extensionFolder);
         return data;
     }
 
@@ -150,47 +172,6 @@ class Magento {
     }
 
     /**
-     * Creates new Magento 2 extension
-     *
-     * @param {string} vendor extension Vendor name
-     * @param {string} extension extension name
-     * @returns {Promise<Uri>} Uri of the created extension folder
-     * @memberof Magento
-     */
-    async createExtension(vendor: string, extension: string): Promise<Uri> {
-        const codeUri = this.getAppCodeUri();
-        const extensionUri = this.appendUri(codeUri, vendor, extension);
-        const registrationPhpUri = this.appendUri(extensionUri, 'registration.php');
-        const composerJsonUri = this.appendUri(extensionUri, 'composer.json');
-        const moduleXmlUri = this.appendUri(extensionUri, 'etc', 'module.xml');
-        try {
-            await fs.createDirectory(extensionUri);
-            await fs.createDirectory(this.appendUri(extensionUri, 'etc'));
-        } catch {
-            throw new Error('Error creating extension folder');
-        }
-        try {
-            await fs.writeFile(
-                registrationPhpUri,
-                this.encoder(require('../templates/registration.php')({ vendor, extension }))
-            );
-            await fs.writeFile(
-                moduleXmlUri,
-                this.encoder(require('../templates/etc/module.xml')({ vendor, extension }))
-            );
-            await fs.writeFile(
-                composerJsonUri,
-                this.encoder(require('../templates/composer.handlebars')({ vendor, extension }))
-            );
-        } catch (e) {
-            console.log(e);
-            throw new Error('Error creating extension files');
-        }
-        await workspace.openTextDocument(moduleXmlUri);
-        return extensionUri;
-}
-
-    /**
      * Adds template content to the newly created empty file
      * based on it's file name
      *
@@ -204,7 +185,12 @@ class Magento {
             // File is not empty, stop processing
             return;
         }
-        let data = this.getUriData(textDocument.uri);
+        try {
+            var data = await this.getUriData(textDocument.uri);
+        } catch {
+            // getUriData may fail for files not in the worspace folders, no need to continue
+            return;
+        }
         if (!data.vendor || !data.extension) {
             // File is not in the Magento 2 extension
             return;
@@ -226,13 +212,12 @@ class Magento {
      * Generate proper indent string using spaces/tabs based on the
      *  editor settings
      *
-     * @private
      * @param {TextEditor} textEditor
      * @param {number} indent number of indenting steps
      * @returns {string}
      * @memberof Magento
      */
-    private indentCode(textEditor: TextEditor | undefined, indent: number): string {
+    indentCode(textEditor: TextEditor | undefined, indent: number): string {
         if (!textEditor) {
             return " ".repeat(indent * 4);
         }
@@ -246,13 +231,12 @@ class Magento {
     /**
      * Create Docblock string
      *
-     * @private
      * @param {TextEditor} textEditor
      * @param {Docblock} docblock
      * @returns
      * @memberof Magento
      */
-    private docblock(textEditor: TextEditor, docblock: Docblock) {
+    docblock(textEditor: TextEditor, docblock: Docblock) {
         let indent = this.indentCode(textEditor, 1);
         let result = indent + '/**\n';
         if (docblock.description) {
@@ -264,143 +248,6 @@ class Magento {
         }
         result += indent + ' */\n';
         return result;
-    }
-
-    /**
-     * DI automation
-     *
-     * @param {TextEditor} textEditor
-     * @param {string} className
-     * @param {string} varName
-     * @memberof Magento
-     */
-    async injectDependency(textEditor: TextEditor, className: string, varName: string): Promise<void> {
-        // strip $ from the variable name
-        varName = varName.startsWith('$') ? varName.substring(1) : varName;
-        let document = textEditor.document;
-        let data = this.getUriData(document.uri);
-        let ast = new Ast();
-        ast.parseCode(document.getText(), data.name+'.'+data.ext);
-        let classNode = ast.findClass(data.name);
-        if (!classNode) {
-            throw new Error(`Can't find class '${data.name}'`);
-        }
-        let constructorNode = ast.findConstructor(classNode);
-
-        let inserts: Insert[] = [];
-
-        if (!constructorNode) {
-            throw new Error(`Can't find constructor in the class '${data.name}'`);
-        }
-
-        // Adding argument to the constructor
-        let previousArg: Parser.Parameter | undefined;
-        if (constructorNode.arguments.length > 0) {
-            // there are some arguments already
-            for(var i = constructorNode.arguments.length-1; i >= 0; i--) {
-                let arg = constructorNode.arguments[i];
-                // skipping arguments with a default values
-                if (!arg.value) {
-                    break;
-                }
-            }
-
-            if (i === constructorNode!.arguments.length-1) {
-                // adding after the last argument
-                let arg = previousArg = constructorNode!.arguments[i];
-                let indentation = document.getText(new Range(arg.loc.start.line-1, 0, arg.loc.start.line-1, arg.loc.start.column));
-                inserts.push({
-                    line: arg.loc.end.line-1,
-                    column: arg.loc.end.column,
-                    text: `,\n${indentation}${className} $${varName}`,
-                });
-            } else {
-                // adding before some argument
-                previousArg = constructorNode!.arguments[i];
-                let arg = constructorNode!.arguments[i+1];
-                let indentation = document.getText(new Range(arg.loc.start.line-1, 0, arg.loc.start.line-1, arg.loc.start.column));
-                inserts.push({
-                    line: arg.loc.start.line-1,
-                    column: 0,
-                    text: `${indentation}${className} $${varName},\n`,
-                });
-            }
-        } else {
-            // there is no arguments yes, need to guess where to insert one
-            let constructorCode = document.getText(new Range(
-                    constructorNode.loc.start.line-1, constructorNode.loc.start.column,
-                    constructorNode.loc.end.line-1, constructorNode.loc.end.column
-                ));
-            let constructorOffset = document.offsetAt(new Position(constructorNode.loc.start.line-1, constructorNode.loc.start.column));
-            let argsOffset = constructorCode.indexOf('(');
-            let argsPosition = document.positionAt(constructorOffset + argsOffset + 1);
-            inserts.push({
-                line: argsPosition.line,
-                column: argsPosition.character,
-                text: '\n'+this.indentCode(textEditor, 2)+`${className} $${varName}\n`+this.indentCode(textEditor, 1),
-            });
-        }
-
-        // adding variable to the class
-        let pos: Parser.Position;
-        if (constructorNode.leadingComments) {
-            pos = constructorNode.leadingComments[0].loc.start;
-        } else {
-            pos = constructorNode.loc.start;
-        }
-        let indent = this.indentCode(textEditor, 1);
-        var docblock = this.docblock(textEditor, { params: [['@param', className]] });
-        inserts.push({
-            line: pos.line-1,
-            column: 0,
-            text: `${docblock}${indent}private $${varName};\n\n`,
-        });
-
-        // adding assignment to the constructor
-        let assignmentPosition: Position | undefined;
-        let statements = constructorNode.body.children;
-        for(let statement of statements) {
-            if (statement.kind === 'expressionstatement') {
-                let expression = (statement as Parser.ExpressionStatement).expression;
-                if (previousArg && expression.kind === 'assign') {
-                    expression = expression as Parser.Expression;
-                    if (
-                        expression.left.kind === 'propertylookup' &&
-                        expression.right.kind === 'variable' &&
-                        expression.right.name as unknown as string === previousArg.name.name
-                    ) {
-                        // found assignment of the previous argument
-                        assignmentPosition = new Position(expression.loc.start.line, 0);
-                        break;
-                    }
-                }
-            }
-        }
-
-        if (!assignmentPosition) {
-            if (constructorNode.body.children.length > 0) {
-                assignmentPosition = new Position(constructorNode.body.children[0].loc.start.line-1, 0);
-            } else {
-                assignmentPosition = new Position(constructorNode.body.loc.start.line, 0);
-            }
-        }
-        inserts.push({
-            line: assignmentPosition.line,
-            column: assignmentPosition.character,
-            text: this.indentCode(textEditor, 2) + `$this->${varName} = $${varName};\n`,
-        });
-        try {
-            var result = await textEditor.edit(editBuilder => {
-                for(let insert of inserts) {
-                    editBuilder.insert(new Position(insert.line, insert.column), insert.text);
-                }
-            });
-        } catch (e) {
-            throw new Error('Can\'t apply edits');
-        }
-        if (!result) {
-            throw new Error('Can\'t apply edits');
-        }
     }
 
     /**
@@ -420,12 +267,12 @@ class Magento {
             'register.php'
         );
         let extClasses: string[]  = [];
-        files.forEach(uri => {
-            let data = this.getUriData(uri);
+        for(let uri of files) {
+            let data = await this.getUriData(uri);
             if (data.vendor && data.extension && data.namespace && data.name) {
                 extClasses.push(`\\${data.vendor}\\${data.extension}\\${data.namespace}\\${data.name}`);
             }
-        });
+        }
         return extClasses;
     }
 
@@ -448,7 +295,7 @@ class Magento {
     /**
      * Returns array of event names
      *
-     * @returns any
+     * @returns QuickPickItem[]
      * @memberof Magento
      */
     getEvents(): QuickPickItem[] {
@@ -524,77 +371,6 @@ class Magento {
 
     relativePath(uri: Uri): string {
         return workspace.asRelativePath(uri);
-    }
-
-    async addObserver(extensionData: ExtensionInfo, eventName: string, observerName: string): Promise<void> {
-        if (!workspace.workspaceFolders) {
-            throw new Error('No open workspace');
-        }
-        let eventsXmlUri = this.appendUri(workspace.workspaceFolders[0].uri, 'app', 'code', extensionData.vendor, extensionData.extension, 'etc', 'events.xml');
-        let observerPhpUri = this.appendUri(workspace.workspaceFolders[0].uri, 'app', 'code', extensionData.vendor, extensionData.extension, 'Observer',  ...(observerName+'.php').split('\\'));
-
-        if (await this.fileExists(observerPhpUri)) {
-            throw new Error(this.relativePath(observerPhpUri)+' already exists');
-        }
-
-        let stats;
-        try {
-            stats = await fs.stat(eventsXmlUri);
-        } catch {
-            // file not found
-            let eventsXml = require('../templates/etc/events.xml')(Object.assign({ eventName, observerName }, extensionData));
-            this.writeFile(eventsXmlUri, eventsXml);
-        }
-        if (stats) {
-            if (stats.type !== FileType.File) {
-                throw new Error(this.relativePath(eventsXmlUri)+' is not a file');
-            }
-            let eventsXml = await this.readFile(eventsXmlUri);
-            try {
-                var xml = convert.xml2js(eventsXml, {
-                    compact: false,
-                    alwaysChildren: true,
-                });
-            } catch (e) {
-                console.log(e);
-                throw new Error('Error parsing '+this.relativePath(eventsXmlUri));
-            }
-            console.log(xml);
-            let configNode;
-            for (let element of xml.elements) {
-                if (element.type === 'element' && element.name === 'config') {
-                    configNode = element;
-                }
-            }
-            if (configNode) {
-                    configNode.elements.push({
-                    type: 'element',
-                    name: 'event',
-                    attributes: { name: eventName },
-                    elements: [{
-                        type: 'element',
-                        name: 'observer',
-                        attributes: {
-                            name: `${extensionData.vendor}_${extensionData.extension}_${observerName}`,
-                            instance: `${extensionData.vendor}\\${extensionData.extension}\\Observer\\${observerName}`,
-                        }
-                    }]
-                });
-
-                let eventsXml = convert.js2xml(xml, {
-                    spaces: this.indentCode(window.activeTextEditor, 1),
-                    compact: false,
-                });
-                await this.writeFile(eventsXmlUri, eventsXml);
-            } else {
-                throw new Error('Error parsing '+this.relativePath(eventsXmlUri));
-            }
-        }
-
-        let observerData = Object.assign({ data: eventsList[eventName].data }, this.getUriData(observerPhpUri));
-        let observerPhp = require('../templates/observer.php')(observerData);
-        await this.writeFile(observerPhpUri, observerPhp);
-        await window.showTextDocument(observerPhpUri);
     }
 }
 

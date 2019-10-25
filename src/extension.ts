@@ -1,6 +1,9 @@
 import * as vscode from 'vscode';
 import createQuickPickCustom, { QuickPickCustomOptons } from './quickPickCustom';
 import magento, { ExtensionInfo }  from './magento';
+import createExtension from './actions/createExtension';
+import injectDependency from './actions/injectDependency';
+import addObserver from './actions/addObserver';
 
 async function getVendorExtension(options?: QuickPickCustomOptons): Promise<ExtensionInfo | undefined> {
     if (!options) {
@@ -35,7 +38,14 @@ async function getVendorExtension(options?: QuickPickCustomOptons): Promise<Exte
             extension = await createQuickPickCustom(extensions, Object.assign({}, options, { title: 'Please select Extension' }));
         }
         if (extension) {
-            return { workspace: currentWorkspace, vendor, extension };
+            let extensionFolder = `app/code/${vendor}/${extension}`;
+            return {
+                workspace: currentWorkspace,
+                vendor,
+                extension,
+                extensionFolder,
+                extensionUri: magento.appendUri(currentWorkspace.uri, extensionFolder),
+            };
         }
     } else {
         return undefined;
@@ -50,7 +60,7 @@ export function activate(context: vscode.ExtensionContext) {
             return;
         }
         try {
-            await magento.createExtension(data.vendor, data.extension);
+            await createExtension(data.vendor, data.extension);
             vscode.window.showInformationMessage(`Created extension ${data.vendor}_${data.extension}`);
         } catch (e) {
             vscode.window.showErrorMessage(e.message);
@@ -62,7 +72,7 @@ export function activate(context: vscode.ExtensionContext) {
             if (!textEditor || textEditor.document.languageId !== 'php') {
                 throw new Error('Only supported for PHP files');
             }
-            let data = magento.getUriData(textEditor.document.uri);
+            let data = await magento.getUriData(textEditor.document.uri);
             if (!data.vendor || !data.extension) {
                 throw new Error('Not a Magento 2 extension file');
             }
@@ -79,7 +89,7 @@ export function activate(context: vscode.ExtensionContext) {
                         validateInput: value => { return !value.match(/^\$?[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*$/) ? 'Incorrect variable name' : '' ; },
                     });
                     if (varName) {
-                        magento.injectDependency(textEditor, className, varName);
+                        await injectDependency(textEditor, className, varName);
                     }
                 }
             }
@@ -94,7 +104,7 @@ export function activate(context: vscode.ExtensionContext) {
             let extensionData;
             if (textEditor) {
                 try {
-                    extensionData = magento.getUriData(textEditor.document.uri);
+                    extensionData = await magento.getUriData(textEditor.document.uri);
                     totalSteps = 2;
                     step = 1;
                 } catch {}
@@ -115,7 +125,7 @@ export function activate(context: vscode.ExtensionContext) {
                     validateInput: value => { return !value.match(/^[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*(\\[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*)*$/) ? 'Incorrect class name' : '' ; },
                 });
                 if (observerName) {
-                    await magento.addObserver(extensionData, eventName, observerName!);
+                    await addObserver(extensionData, eventName, observerName!);
                 }
             }
         } catch (e) {
