@@ -96,7 +96,7 @@ export function activate(context: vscode.ExtensionContext) {
         } catch(e) {
             vscode.window.showErrorMessage(e.message);
         }
-}));
+    }));
     context.subscriptions.push(vscode.commands.registerCommand('magentowizard.addObserver', async () => {
         let textEditor = vscode.window.activeTextEditor;
         let step, totalSteps;

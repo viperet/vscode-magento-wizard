@@ -4,6 +4,7 @@ import classList from './classlist';
 import eventsList from './eventsList';
 import camelCase from 'camelcase';
 import * as convert  from 'xml-js';
+import * as NodeCache from 'node-cache';
 const fs = workspace.fs;
 
 import { TextEncoder, TextDecoder } from 'util';
@@ -40,6 +41,8 @@ class Magento {
     encoder: (input?: string | undefined) => Uint8Array;
     decoder: (input?: Uint8Array | Uint8ClampedArray | Uint16Array | Uint32Array | Int8Array | Int16Array | Int32Array | Float32Array | Float64Array | DataView | ArrayBuffer | null | undefined, options?: any | undefined) => string;
 
+    private uriDataCache: NodeCache;
+
     // @ts-ignore
     folder: WorkspaceFolder;
 
@@ -48,6 +51,7 @@ class Magento {
         this.encoder = encoder.encode.bind(encoder);
         let decoder = new TextDecoder();
         this.decoder = decoder.decode.bind(decoder);
+        this.uriDataCache = new NodeCache({ useClones: false, stdTTL: 60, checkperiod: 60 });
     }
 
     /**
@@ -115,12 +119,18 @@ class Magento {
                 data.extensionFolder = `${matches.groups.rootPath}vendor/${matches.groups.vendor}/${matches.groups.extension}/`;
                 try {
                     const moduleXmlUri = this.appendUri(currentWorkspace.uri, data.extensionFolder, 'etc', 'module.xml');
-                    const moduleXml = await this.readFile(moduleXmlUri);
-                    var xml = convert.xml2js(moduleXml, {
-                        compact: true,
-                        ignoreComment: true,
-                    }) as any;
-                    const name = xml.config.module._attributes.name.split('_');
+                    let name = this.uriDataCache.get(moduleXmlUri.fsPath) as string[];
+                    if (name === undefined) {
+                        // handle cache miss - parse etc/module.xml
+                        const moduleXml = await this.readFile(moduleXmlUri);
+                        var xml = convert.xml2js(moduleXml, {
+                            compact: true,
+                            ignoreComment: true,
+                        }) as any;
+                        name = xml.config.module._attributes.name.split('_');
+                        // store extension data in cache
+                        this.uriDataCache.set(moduleXmlUri.fsPath, name);
+                    }
                     data.vendor = name[0];
                     data.extension = name[1];
                 } catch {
@@ -277,7 +287,7 @@ class Magento {
 
     async searchClasses(path: string): Promise<string[]> {
         let pattern = new RelativePattern(
-                this.appendUri(this.folder.uri, path).fsPath, 
+                this.appendUri(this.folder.uri, path).fsPath,
                 '**/*.php'
             );
         let files = await workspace.findFiles(
