@@ -74,6 +74,12 @@ export default function createQuickPickCustom(
             function processChunk(chunk: AsyncIterableIterator<string[]>) {
                 chunk.next().then(data => {
                     items.push(...data.value.map((item: string) => ({ label: item })));
+                    // remove duplicates
+                    items = items.filter((item, index, self) => 
+                        index === self.findIndex(t => (
+                            t.label === item.label
+                        ))
+                    );
                     quickPick.items = items;
                     if (data.done) {
                         quickPick.busy = false;
