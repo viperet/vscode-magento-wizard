@@ -23,7 +23,7 @@ You can easily add observer for any event using "MagentoWizard: Add Observer" co
 - [x] Injecting dependencies
   - [x] Better placement of the assignments
   - [x] Autocomple classes/interfaces from the current extension
-  - [ ] Autocomple classes/interfaces from 'vendor'
+  - [x] Autocomple classes/interfaces from 'vendor'
 - [x] Adding Observer
 - [ ] Adding Plugin
 - [ ] Adding Route, Controller, Block, Layout, Template
@@ -34,6 +34,12 @@ You can easily add observer for any event using "MagentoWizard: Add Observer" co
 - [ ] More templates
 
 ## Release Notes
+
+### 1.1.4
+
+Added support for extensions in /vendor. Added classes from current extension (including from /vendor) to list in
+Inject Dependency command, removed duplicates from the list. Added caching of extension file data.
+Improved Observer class name and DI variable name generation
 
 ### 1.1.3
 
