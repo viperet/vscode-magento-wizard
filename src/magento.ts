@@ -351,7 +351,7 @@ class Magento {
      * @memberof Magento
      */
     suggestObserverName(eventName: string): string {
-        return camelCase(eventName);
+        return camelCase(eventName, { pascalCase: true });
     }
 
     async readFile(uri: Uri): Promise<string> {
