@@ -312,9 +312,14 @@ class Magento {
      * @memberof Magento
      */
     suggestVariableName(className: string): string {
-        let varname = className.split('\\').pop();
+        const shortNames = ['Data', 'Context', 'Item', 'Session'];
+        let classes = className.split('\\');
+        let varname = classes.pop();
         if (!varname) {
             return '';
+        }
+        if (shortNames.includes(varname)) {
+            varname = classes.pop() + varname;
         }
         varname = varname.replace(/Interface$/, '');
         return camelCase(varname);
