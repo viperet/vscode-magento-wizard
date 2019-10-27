@@ -1,6 +1,6 @@
 import Engine, { Program, Block, Node, Method } from 'php-parser';
 
-class Ast {
+class Php {
     private parser: Engine;
     private ast: Program | undefined;
 
@@ -21,7 +21,7 @@ class Ast {
      * @param {string} code PHP code
      * @param {string} filename PHP file name
      * @returns {Program}
-     * @memberof Ast
+     * @memberof Php
      */
     parseCode(code: string, filename: string): Program {
         this.ast = this.parser.parseCode(code, filename);
@@ -62,7 +62,7 @@ class Ast {
      * @param {string} className
      * @param {(Block | Node)} [block]
      * @returns {(Node | null)}
-     * @memberof Ast
+     * @memberof Php
      */
     findClass(className: string, block?: Block | Node): Node | null {
         if (!block) {
@@ -86,7 +86,7 @@ class Ast {
      *
      * @param {Node} classNode
      * @returns {(Method | null)}
-     * @memberof Ast
+     * @memberof Php
      */
     findConstructor(classNode: Node): Method | null {
         if (!classNode.body) {
@@ -102,4 +102,4 @@ class Ast {
 
 }
 
-export default Ast;
+export default Php;

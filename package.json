@@ -43,6 +43,10 @@
 			{
 				"command": "magentowizard.addObserver",
 				"title": "MagentoWizard: Add Observer"
+			},
+			{
+				"command": "magentowizard.addPlugin",
+				"title": "MagentoWizard: Add Plugin"
 			}
 		]
 	},

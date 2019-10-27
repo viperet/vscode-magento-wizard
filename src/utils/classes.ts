@@ -1,6 +1,6 @@
 import * as path from 'path';
 import * as fs from 'fs';
-import Ast from '../ast';
+import Php from '../php';
 
 function fromDir(startPath: string, filter: RegExp, callback: (filename: string) => void ){
     if (!fs.existsSync(startPath)){
@@ -22,7 +22,7 @@ function fromDir(startPath: string, filter: RegExp, callback: (filename: string)
 }
 
 let classes  = new Map();
-let ast = new Ast();
+let ast = new Php();
 let progress: Promise<void>[] = [];
 
 

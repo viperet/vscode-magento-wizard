@@ -133,6 +133,42 @@ export function activate(context: vscode.ExtensionContext) {
         }
     }));
 
+    context.subscriptions.push(vscode.commands.registerCommand('magentowizard.addPlugin', async () => {
+        let textEditor = vscode.window.activeTextEditor;
+        let step, totalSteps;
+        try {
+            let extensionData;
+            if (textEditor) {
+                try {
+                    extensionData = await magento.getUriData(textEditor.document.uri);
+                    totalSteps = 4;
+                    step = 1;
+                } catch {}
+            }
+            if (!extensionData || !extensionData.vendor || !extensionData.extension) {
+                totalSteps = 6;
+                step = 3;
+                extensionData = await getVendorExtension({ custom: false, totalSteps });
+            }
+            if (!extensionData || !extensionData.vendor || !extensionData.extension) {
+                return;
+            }
+            let eventName = await createQuickPickCustom(magento.getEvents(), { step, totalSteps, title: 'Please select event name' });
+            if (eventName) {
+                var observerName = await vscode.window.showInputBox({
+                    prompt: 'Enter observer class name',
+                    value: magento.suggestObserverName(eventName),
+                    validateInput: value => { return !value.match(/^[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*(\\[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*)*$/) ? 'Incorrect class name' : '' ; },
+                });
+                if (observerName) {
+                    await addObserver(extensionData, eventName, observerName!);
+                }
+            }
+        } catch (e) {
+            vscode.window.showErrorMessage(e.message);
+        }
+    }));
+
     let lastOpenedDocument: vscode.TextDocument | undefined;
     context.subscriptions.push(vscode.workspace.onDidOpenTextDocument(textDocument => {
         lastOpenedDocument = textDocument;

@@ -1,6 +1,6 @@
 import { workspace, TextEditor, Position, Range } from 'vscode';
 import magento  from '../magento';
-import Ast from '../ast';
+import Php from '../php';
 import * as Parser from 'php-parser';
 
 interface Insert {
@@ -22,7 +22,7 @@ export default async function (textEditor: TextEditor, className: string, varNam
     varName = varName.startsWith('$') ? varName.substring(1) : varName;
     let document = textEditor.document;
     let data = await magento.getUriData(document.uri);
-    let ast = new Ast();
+    let ast = new Php();
     ast.parseCode(document.getText(), data.name+'.'+data.ext);
     let classNode = ast.findClass(data.name);
     if (!classNode) {
