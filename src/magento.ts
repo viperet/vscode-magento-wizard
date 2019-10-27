@@ -2,7 +2,7 @@ import { workspace, Uri, FileType, TextEditor, Position, Range, WorkspaceFolder,
 import { posix } from 'path';
 import classList from './classlist';
 import eventsList from './eventsList';
-import camelCase from 'camelcase';
+import * as Case from 'case';
 import * as convert  from 'xml-js';
 import * as NodeCache from 'node-cache';
 const fs = workspace.fs;
@@ -322,7 +322,7 @@ class Magento {
             varname = classes.pop() + varname;
         }
         varname = varname.replace(/Interface$/, '');
-        return camelCase(varname);
+        return Case.camel(varname);
     }
 
     /**
@@ -356,7 +356,7 @@ class Magento {
      * @memberof Magento
      */
     suggestObserverName(eventName: string): string {
-        return camelCase(eventName, { pascalCase: true });
+        return Case.pascal(eventName);
     }
 
     async readFile(uri: Uri): Promise<string> {
@@ -395,7 +395,7 @@ class Magento {
 
     async fileExists(uri: Uri): Promise<boolean> {
         try {
-            let stat = await fs.stat(uri);
+            await fs.stat(uri);
             return true;
         } catch {
             return false;
@@ -404,6 +404,24 @@ class Magento {
 
     relativePath(uri: Uri): string {
         return workspace.asRelativePath(uri);
+    }
+
+    getClassFile(extension: ExtensionInfo, className: string): Uri | undefined {
+        const classPath = className.split('\\').filter(Boolean);
+        let file: Uri;
+        if (extension.vendor === classPath[0] && extension.extension === classPath[1]) {
+            // class from current extension
+            file = extension.extensionUri;
+        } else if (classPath[0] === 'Magento') {
+            file = this.appendUri(extension.workspace.uri, 'vendor/magento/module-'+Case.kebab(classPath[1]));
+        } else {
+            return undefined;
+        }
+        for(let i = 2; i < classPath.length-1; ++i) {
+            file = this.appendUri(file, classPath[i]);
+        }
+        file = this.appendUri(file, classPath.pop()+'.php');
+        return file;
     }
 }
 

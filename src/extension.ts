@@ -153,15 +153,16 @@ export function activate(context: vscode.ExtensionContext) {
             if (!extensionData || !extensionData.vendor || !extensionData.extension) {
                 return;
             }
-            let eventName = await createQuickPickCustom(magento.getEvents(), { step, totalSteps, title: 'Please select event name' });
-            if (eventName) {
+            let className = await createQuickPickCustom(magento.getClasses(extensionData), { custom: true, step, totalSteps, title: 'Please enter or select class in which you want to intercept method call' });
+            if (className) {
+                let classFile = magento.getClassFile(extensionData, className);
                 var observerName = await vscode.window.showInputBox({
                     prompt: 'Enter observer class name',
-                    value: magento.suggestObserverName(eventName),
+                    value: magento.suggestObserverName(className),
                     validateInput: value => { return !value.match(/^[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*(\\[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*)*$/) ? 'Incorrect class name' : '' ; },
                 });
                 if (observerName) {
-                    await addObserver(extensionData, eventName, observerName!);
+                    await addObserver(extensionData, className, observerName!);
                 }
             }
         } catch (e) {
