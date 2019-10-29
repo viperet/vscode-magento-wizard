@@ -8,6 +8,7 @@ import * as NodeCache from 'node-cache';
 const fs = workspace.fs;
 
 import { TextEncoder, TextDecoder } from 'util';
+import Php, { MethodVisibility } from './php';
 
 export interface ExtensionInfo {
     /** Workspace folder of the extension */
@@ -95,6 +96,7 @@ class Magento {
         if (!currentWorkspace) {
             throw new Error('File not in the workspace (not saved yet?)');
         }
+        this.folder = currentWorkspace;
         let data: UriData = { workspace: currentWorkspace, vendor: '', extension: '', type: '', namespace: '', name: '', ext: '', extensionFolder: '', extensionUri: currentWorkspace.uri };
         let relativePath = workspace.asRelativePath(uri);
         let path: string[] = [];
@@ -359,6 +361,18 @@ class Magento {
         return Case.pascal(eventName);
     }
 
+    /**
+     * Creates plugin name from class name
+     *
+     * @param {string} className
+     * @returns {string}
+     * @memberof Magento
+     */
+    suggestPluginName(className: string): string {
+        let classes = className.split('\\');
+        return (classes[3] ? classes[3]+'\\' : '') + Case.pascal(this.suggestVariableName(className));
+    }
+
     async readFile(uri: Uri): Promise<string> {
         for(let textEditor of window.visibleTextEditors) {
             if (textEditor.document.uri.toString() === uri.toString()) {
@@ -402,10 +416,26 @@ class Magento {
         }
     }
 
+    /**
+     * Returns Uri path relative to the workspace folder
+     *
+     * @param {Uri} uri
+     * @returns {string}
+     * @memberof Magento
+     */
     relativePath(uri: Uri): string {
         return workspace.asRelativePath(uri);
     }
 
+    /**
+     * Get file Uri by class name
+     *  Can return Uri of unexisting file
+     *
+     * @param {ExtensionInfo} extension
+     * @param {string} className
+     * @returns {(Uri | undefined)}
+     * @memberof Magento
+     */
     getClassFile(extension: ExtensionInfo, className: string): Uri | undefined {
         const classPath = className.split('\\').filter(Boolean);
         let file: Uri;
@@ -422,6 +452,23 @@ class Magento {
         }
         file = this.appendUri(file, classPath.pop()+'.php');
         return file;
+    }
+    async getClassMethods(classFile: Uri): Promise<string[]> {
+        let php = new Php();
+        const data = await this.getUriData(classFile);
+        php.parseCode(await this.readFile(classFile), data.name+'.php');
+        const methods = await php.getMethods(data.name);
+        return methods
+            .filter(method => method.visibility ===MethodVisibility.public && method.name !== '__construct' )
+            .map(method => {
+                let params: string[] = method.parameters.map(param => (param.type ? param.type + ' $' : '$') + param.name);
+                return method.name+'('+params.join(', ')+')';
+            });
+    }
+
+    validateClassName(className: string) {
+        // TODO Add proper class name validation, check for reserved words
+        return className.match(/^[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*(\\[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*)*$/);
     }
 }
 

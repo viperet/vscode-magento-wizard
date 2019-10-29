@@ -1,8 +1,23 @@
-import Engine, { Program, Block, Node, Method } from 'php-parser';
+import * as vscode from 'vscode';
+import Engine, { Program, Block, Node, Method, Reference } from 'php-parser';
+
+export enum MethodVisibility { public, private, protected }
+export interface MethodParameter {
+    type: string;
+    name: string;
+}
+export interface ClassMethod {
+    name: string;
+    parameters: MethodParameter[];
+    returnType?: string;
+    visibility: MethodVisibility;
+}
+export type NamespaceAliases = { [alias: string]: string };
 
 class Php {
     private parser: Engine;
     private ast: Program | undefined;
+    private aliases: NamespaceAliases | undefined;
 
     constructor() {
         this.parser = new Engine({
@@ -28,7 +43,7 @@ class Php {
         return this.ast;
     }
 
-    getAliases(): { [alias: string]: string } {
+    getAliases(): NamespaceAliases {
         let aliases: { [alias: string]: string } = {};
         if (
             this.ast &&
@@ -54,6 +69,19 @@ class Php {
             }
         }
         return aliases;
+    }
+
+    resolveType(type: Reference): string {
+        if (!this.aliases) {
+            this.aliases = this.getAliases();
+        }
+        let argClassName = type.name;
+        let classPath = argClassName.split('\\');
+        if (type.resolution !== 'fqn' && this.aliases[classPath[0]]) {
+            classPath[0] = this.aliases[classPath[0]];
+            argClassName = classPath.join('\\');
+        }
+        return argClassName;
     }
 
     /**
@@ -98,6 +126,41 @@ class Php {
             }
         }
         return null;
+    }
+
+    async getMethods(className: string): Promise<ClassMethod[]>  {
+        let methods: ClassMethod[] = [];
+        let classNode = this.findClass(className) as any;
+        if (!classNode) {
+            throw new Error(`Can't find class '${className}'`);
+        }
+        for (let item of classNode.body as any[]) {
+            if (item.kind === 'method') {
+                if (item.name) {
+                    let methodVisibility: MethodVisibility;
+                    switch(item.name.visibility) {
+                        case 'protected': methodVisibility = MethodVisibility.protected; break;
+                        case 'private': methodVisibility = MethodVisibility.private; break;
+                        default: methodVisibility = MethodVisibility.public; break;
+                    }
+                    let parameters: MethodParameter[] = [];
+                    for (let param of item.arguments) {
+                        if (param.kind === 'parameter') {
+                            parameters.push({
+                                type: param.type ? this.resolveType(param.type) : '',
+                                name: param.name.name,
+                            });
+                        }
+                    }
+                    methods.push({
+                        name: item.name.name,
+                        visibility: methodVisibility,
+                        parameters
+                    });
+                }
+            }
+        }
+        return methods;
     }
 
 }

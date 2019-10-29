@@ -4,6 +4,7 @@ import magento, { ExtensionInfo }  from './magento';
 import createExtension from './actions/createExtension';
 import injectDependency from './actions/injectDependency';
 import addObserver from './actions/addObserver';
+import addPlugin from './actions/addPlugin';
 
 async function getVendorExtension(options?: QuickPickCustomOptons): Promise<ExtensionInfo | undefined> {
     if (!options) {
@@ -122,7 +123,7 @@ export function activate(context: vscode.ExtensionContext) {
                 var observerName = await vscode.window.showInputBox({
                     prompt: 'Enter observer class name',
                     value: magento.suggestObserverName(eventName),
-                    validateInput: value => { return !value.match(/^[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*(\\[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*)*$/) ? 'Incorrect class name' : '' ; },
+                    validateInput: value => { return !magento.validateClassName(value) ? 'Incorrect class name' : '' ; },
                 });
                 if (observerName) {
                     await addObserver(extensionData, eventName, observerName!);
@@ -135,14 +136,12 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(vscode.commands.registerCommand('magentowizard.addPlugin', async () => {
         let textEditor = vscode.window.activeTextEditor;
-        let step, totalSteps;
-        try {
+        let step = 1, totalSteps = 4;
+        // try {
             let extensionData;
             if (textEditor) {
                 try {
                     extensionData = await magento.getUriData(textEditor.document.uri);
-                    totalSteps = 4;
-                    step = 1;
                 } catch {}
             }
             if (!extensionData || !extensionData.vendor || !extensionData.extension) {
@@ -154,20 +153,33 @@ export function activate(context: vscode.ExtensionContext) {
                 return;
             }
             let className = await createQuickPickCustom(magento.getClasses(extensionData), { custom: true, step, totalSteps, title: 'Please enter or select class in which you want to intercept method call' });
-            if (className) {
-                let classFile = magento.getClassFile(extensionData, className);
-                var observerName = await vscode.window.showInputBox({
-                    prompt: 'Enter observer class name',
-                    value: magento.suggestObserverName(className),
-                    validateInput: value => { return !value.match(/^[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*(\\[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*)*$/) ? 'Incorrect class name' : '' ; },
-                });
-                if (observerName) {
-                    await addObserver(extensionData, className, observerName!);
-                }
+            if (!className) { return; }
+
+            let classFile = magento.getClassFile(extensionData, className);
+
+            let methods: string[] = [];
+            if (classFile) {
+                methods = await magento.getClassMethods(classFile);
             }
-        } catch (e) {
-            vscode.window.showErrorMessage(e.message);
-        }
+            step++;
+            let methodName = await createQuickPickCustom(methods, { custom: true, step, totalSteps, title: 'Please enter or select method you want to intercept' });
+            if (!methodName) { return; }
+
+            step++;
+            let pluginType = await createQuickPickCustom(['before', 'after', 'around'], { custom: false, step, totalSteps, title: 'Please select plugin type' });
+            if (!pluginType) { return; }
+
+            var pluginName = await vscode.window.showInputBox({
+                prompt: 'Enter plugin class name',
+                value: magento.suggestPluginName(className),
+                validateInput: value => { return !magento.validateClassName(value) ? 'Incorrect class name' : '' ; },
+            });
+            if (!pluginName) { return; }
+
+            await addPlugin(extensionData, className, methodName, pluginType, pluginName);
+        // } catch (e) {
+        //     vscode.window.showErrorMessage(e.message);
+        // }
     }));
 
     let lastOpenedDocument: vscode.TextDocument | undefined;

@@ -37,7 +37,6 @@ export default async function (extensionData: ExtensionInfo, eventName: string, 
             console.log(e);
             throw new Error('Error parsing '+magento.relativePath(eventsXmlUri));
         }
-        console.log(xml);
         let configNode;
         for (let element of xml.elements) {
             if (element.type === 'element' && element.name === 'config') {
