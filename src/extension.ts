@@ -5,6 +5,7 @@ import createExtension from './actions/createExtension';
 import injectDependency from './actions/injectDependency';
 import addObserver from './actions/addObserver';
 import addPlugin from './actions/addPlugin';
+import Php, { ClassMethod, MethodVisibility } from './php';
 
 async function getVendorExtension(options?: QuickPickCustomOptons): Promise<ExtensionInfo | undefined> {
     if (!options) {
@@ -157,13 +158,36 @@ export function activate(context: vscode.ExtensionContext) {
 
             let classFile = magento.getClassFile(extensionData, className);
 
-            let methods: string[] = [];
+            let methods: ClassMethod[] = [];
             if (classFile) {
                 methods = await magento.getClassMethods(classFile);
             }
+            let methodsNames: string[] = [];
+            if (methods) {
+                methodsNames = methods
+                    .filter(method => method.visibility === MethodVisibility.public && method.name !== '__construct' )
+                    .map(method => {
+                        let params: string[] = method.parameters.map(param => (param.type ? param.type + ' $' : '$') + param.name);
+                        return method.name+'('+params.join(', ')+')';
+                    });
+            }
             step++;
-            let methodName = await createQuickPickCustom(methods, { custom: true, step, totalSteps, title: 'Please enter or select method you want to intercept' });
-            if (!methodName) { return; }
+            let methodSelected= await createQuickPickCustom(methodsNames, { custom: true, step, totalSteps, title: 'Please enter or select method you want to intercept' });
+            if (!methodSelected) { return; }
+            let methodName = methodSelected.match(/^(.*?)\(/)![1];
+            let method = methods.find(function (this: string, method) { return method.name === this; }, methodName);
+            if (!method) {
+                method = {
+                    name: methodName,
+                    visibility: MethodVisibility.public,
+                    parameters: [
+                        {
+                            name: 'arg1',
+                            type: '',
+                        }
+                    ]
+                };
+            }
 
             step++;
             let pluginType = await createQuickPickCustom(['before', 'after', 'around'], { custom: false, step, totalSteps, title: 'Please select plugin type' });
@@ -176,7 +200,7 @@ export function activate(context: vscode.ExtensionContext) {
             });
             if (!pluginName) { return; }
 
-            await addPlugin(extensionData, className, methodName, pluginType, pluginName);
+            await addPlugin(extensionData, className, method, pluginType, pluginName);
         // } catch (e) {
         //     vscode.window.showErrorMessage(e.message);
         // }

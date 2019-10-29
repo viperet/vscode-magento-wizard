@@ -7,9 +7,14 @@ class {{ name }}
     {
     }
 
-{{#if typeName == 'before'}}
-    public function {{pluginType}}{{capital methodName}}({{className}} $subject, ) {
-
+{{#ifEq pluginType 'before'}}
+    public function {{pluginType}}{{capital metho.name}}(
+        \\{{className}} $subject, 
+        {{#each method.parameters}} 
+        {{#if type}}{{this.type}} {{/if}}${{this.name}}{{#unless @last}},{{/unless}}
+        {{/each}}
+    ) {
+        return [{{#each method.parameters}}${{this.name}}{{#unless @last}}, {{/unless}}{{/each}}];
     }
-{{/if}}
+{{/ifEq }}
 }

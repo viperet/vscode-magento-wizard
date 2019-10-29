@@ -2,9 +2,10 @@ import { workspace, FileType, window } from 'vscode';
 import * as convert  from 'xml-js';
 import * as Case from 'case';
 import magento, { ExtensionInfo }  from '../magento';
+import { ClassMethod } from '../php';
 const fs = workspace.fs;
-export default async function (extensionData: ExtensionInfo, className: string, methodName: string, pluginType: string, pluginName: string): Promise<void> {
-    const pluginData = { className: className.replace(/^\\/, ''), methodName, pluginType, pluginName };
+export default async function (extensionData: ExtensionInfo, className: string, method: ClassMethod, pluginType: string, pluginName: string): Promise<void> {
+    const pluginData = { className: className.replace(/^\\/, ''), method, pluginType, pluginName };
 
     if (!workspace.workspaceFolders) {
         throw new Error('No open workspace');

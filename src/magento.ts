@@ -8,7 +8,7 @@ import * as NodeCache from 'node-cache';
 const fs = workspace.fs;
 
 import { TextEncoder, TextDecoder } from 'util';
-import Php, { MethodVisibility } from './php';
+import Php, { MethodVisibility, ClassMethod } from './php';
 
 export interface ExtensionInfo {
     /** Workspace folder of the extension */
@@ -119,8 +119,8 @@ class Magento {
                 data.name = matches.groups.fileName;
                 data.ext = matches.groups.ext;
                 data.extensionFolder = `${matches.groups.rootPath}vendor/${matches.groups.vendor}/${matches.groups.extension}/`;
+                let moduleXmlUri = this.appendUri(currentWorkspace.uri, data.extensionFolder, 'etc', 'module.xml');
                 try {
-                    const moduleXmlUri = this.appendUri(currentWorkspace.uri, data.extensionFolder, 'etc', 'module.xml');
                     let name = this.uriDataCache.get(moduleXmlUri.fsPath) as string[];
                     if (name === undefined) {
                         // handle cache miss - parse etc/module.xml
@@ -135,8 +135,9 @@ class Magento {
                     }
                     data.vendor = name[0];
                     data.extension = name[1];
-                } catch {
-                    throw new Error('Error parsing etc/module.xml');
+                } catch (e) {
+                    console.log(e);
+                    throw new Error('Error parsing '+this.relativePath(moduleXmlUri));
                 }
             }
         }
@@ -453,17 +454,12 @@ class Magento {
         file = this.appendUri(file, classPath.pop()+'.php');
         return file;
     }
-    async getClassMethods(classFile: Uri): Promise<string[]> {
+    async getClassMethods(classFile: Uri): Promise<ClassMethod[]> {
         let php = new Php();
         const data = await this.getUriData(classFile);
         php.parseCode(await this.readFile(classFile), data.name+'.php');
         const methods = await php.getMethods(data.name);
-        return methods
-            .filter(method => method.visibility ===MethodVisibility.public && method.name !== '__construct' )
-            .map(method => {
-                let params: string[] = method.parameters.map(param => (param.type ? param.type + ' $' : '$') + param.name);
-                return method.name+'('+params.join(', ')+')';
-            });
+        return methods;
     }
 
     validateClassName(className: string) {
