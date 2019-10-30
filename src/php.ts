@@ -5,6 +5,7 @@ export enum MethodVisibility { public, private, protected }
 export interface MethodParameter {
     type: string;
     name: string;
+    value: string;
 }
 export interface ClassMethod {
     name: string;
@@ -149,6 +150,7 @@ class Php {
                             parameters.push({
                                 type: param.type ? this.resolveType(param.type) : '',
                                 name: param.name.name,
+                                value: param.value ? param.value.raw : '',
                             });
                         }
                     }

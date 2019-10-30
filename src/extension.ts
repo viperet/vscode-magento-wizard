@@ -184,6 +184,7 @@ export function activate(context: vscode.ExtensionContext) {
                         {
                             name: 'arg1',
                             type: '',
+                            value: '',
                         }
                     ]
                 };

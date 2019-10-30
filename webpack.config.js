@@ -42,11 +42,17 @@ const config = {
                 test: /\/templates\//,
                 use: [
                     {
-                        loader: '@icetee/handlebars-loader?helperDirs[]=' + __dirname + '/helpers'
+                        loader: '@icetee/handlebars-loader',
+                        options: {
+                            precompileOptions: {
+                                noEscape: true,
+                            },
+                            helperDirs: [ __dirname + '/helpers' ],
+                        }
                     }
-                ]
+                ],
             }
         ]
-    }
+    },
 };
 module.exports = config;
