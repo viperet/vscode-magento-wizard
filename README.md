@@ -25,7 +25,7 @@ You can easily add observer for any event using "MagentoWizard: Add Observer" co
   - [x] Autocomple classes/interfaces from the current extension
   - [x] Autocomple classes/interfaces from 'vendor'
 - [x] Adding Observer
-- [ ] Adding Plugin
+- [x] Adding Plugin
 - [ ] Adding Route, Controller, Block, Layout, Template
 - [ ] Adding custom attribute to products, categories, orders, customers, etc.
 - [ ] Add Magento tasks like setup:upgrade, cache:clean to VSC tasks
@@ -34,6 +34,10 @@ You can easily add observer for any event using "MagentoWizard: Add Observer" co
 - [ ] More templates
 
 ## Release Notes
+
+### 1.2.0
+
+Add Plugin command, easily add plugin (interceptor) for any public method.
 
 ### 1.1.4
 
