@@ -1,4 +1,4 @@
-import { workspace, Uri, FileType, TextEditor, Position, Range, WorkspaceFolder, window, QuickPickItem, SnippetString, RelativePattern } from 'vscode';
+import { workspace, Uri, FileType, TextEditor, Position, Range, WorkspaceFolder, window, QuickPickItem, SnippetString, RelativePattern, FileStat } from 'vscode';
 import { posix } from 'path';
 import classList from './classlist';
 import eventsList from './eventsList';
@@ -410,7 +410,10 @@ class Magento {
 
     async fileExists(uri: Uri): Promise<boolean> {
         try {
-            await fs.stat(uri);
+            let stat: FileStat = await fs.stat(uri);
+            if (stat.type !== FileType.File ) {
+                throw new Error(this.relativePath(uri)+' is not a file');
+            }
             return true;
         } catch {
             return false;

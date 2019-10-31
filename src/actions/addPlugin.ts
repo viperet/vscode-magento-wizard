@@ -17,18 +17,11 @@ export default async function (extensionData: ExtensionInfo, className: string, 
         throw new Error(magento.relativePath(pluginPhpUri)+' already exists');
     }
 
-    let stats;
-    try {
-        stats = await fs.stat(diXmlUri);
-    } catch {
+    if (!await magento.fileExists(diXmlUri)) {
         // file not found
         let eventsXml = require('../../templates/etc/di.xml')(Object.assign(pluginData, extensionData));
         await magento.writeFile(diXmlUri, eventsXml);
-    }
-    if (stats) {
-        if (stats.type !== FileType.File) {
-            throw new Error(magento.relativePath(diXmlUri)+' is not a file');
-        }
+    } else {
         let diXml = await magento.readFile(diXmlUri);
         try {
             var xml = convert.xml2js(diXml, {

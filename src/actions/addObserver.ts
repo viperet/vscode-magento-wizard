@@ -15,18 +15,11 @@ export default async function (extensionData: ExtensionInfo, eventName: string, 
         throw new Error(magento.relativePath(observerPhpUri)+' already exists');
     }
 
-    let stats;
-    try {
-        stats = await fs.stat(eventsXmlUri);
-    } catch {
+    if (!magento.fileExists(eventsXmlUri)) {
         // file not found
         let eventsXml = require('../../templates/etc/events.xml')(Object.assign({ eventName, observerName }, extensionData));
         magento.writeFile(eventsXmlUri, eventsXml);
-    }
-    if (stats) {
-        if (stats.type !== FileType.File) {
-            throw new Error(magento.relativePath(eventsXmlUri)+' is not a file');
-        }
+    } else {
         let eventsXml = await magento.readFile(eventsXmlUri);
         try {
             var xml = convert.xml2js(eventsXml, {
