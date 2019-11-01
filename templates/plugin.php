@@ -8,7 +8,7 @@ class {{ name }}
     }
 {{#ifEq pluginType 'before'}}
     public function {{pluginType}}{{capital method.name}}(
-        \\{{className}} $subject,
+        \\{{className}} $subject{{#if method.parameters.length}},{{/if}}
         {{#each method.parameters}}
         {{#if type}}{{this.type}} {{/if}}${{this.name}}{{#if this.value}} = {{this.value}}{{/if}}{{#unless @last}},{{/unless}}
         {{/each}}

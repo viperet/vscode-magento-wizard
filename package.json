@@ -1,86 +1,104 @@
 {
-	"name": "vscode-magento-wizard",
-	"repository": {
-		"url": "https://github.com/viperet/vscode-magento-wizard",
-		"type": "git"
-	},
-	"bugs": {
-		"url": "https://github.com/viperet/vscode-magento-wizard/issues",
-		"email": "viperet@gmail.com"
-	},
-	"publisher": "viperet",
-	"displayName": "MagentoWizard",
-	"description": "Will ease life of the Magento 2 developer by automating some repeating tasks, like injecting dependency",
-	"version": "1.2.0",
-	"extensionKind": "workspace",
-	"preview": true,
-	"category": "Other",
-	"icon": "images/magento-wizard-logo.png",
-	"engines": {
-		"vscode": "^1.38.0"
-	},
-	"categories": [
-		"Other"
-	],
-	"activationEvents": [
-		"onCommand:magentowizard.newExtension",
-		"onCommand:magentowizard.injectDependency",
-		"onCommand:magentowizard.addObserver",
-		"workspaceContains:/app/etc/env.php",
-		"workspaceContains:/app/etc/di.xml"
-	],
-	"main": "./dist/extension.js",
-	"contributes": {
-		"commands": [
-			{
-				"command": "magentowizard.newExtension",
-				"title": "MagentoWizard: Create a new extension"
-			},
-			{
-				"command": "magentowizard.injectDependency",
-				"title": "MagentoWizard: Inject Dependency"
-			},
-			{
-				"command": "magentowizard.addObserver",
-				"title": "MagentoWizard: Add Observer"
-			},
-			{
-				"command": "magentowizard.addPlugin",
-				"title": "MagentoWizard: Add Plugin"
-			}
-		]
-	},
-	"scripts": {
-		"_vscode:prepublish": "npm run compile",
-		"compile": "tsc -p ./",
-		"watch": "tsc -watch -p ./",
-		"pretest": "npm run compile",
-		"test": "node ./out/test/runTest.js",
-		"vscode:prepublish": "webpack --mode production",
-		"webpack": "webpack --mode development",
-		"webpack-dev": "webpack --mode development --watch",
-		"test-compile": "tsc -p ./"
-	},
-	"devDependencies": {
-		"@icetee/handlebars-loader": "^1.6.0",
-		"@types/glob": "^7.1.1",
-		"@types/mocha": "^5.2.6",
-		"@types/node": "^10.12.21",
-		"@types/vscode": "^1.38.0",
-		"glob": "^7.1.4",
-		"handlebars": "^4.3.1",
-		"mocha": "^6.1.4",
-		"ts-loader": "^6.1.2",
-		"tslint": "^5.12.1",
-		"typescript": "^3.3.1",
-		"vscode-test": "^1.2.0",
-		"webpack": "^4.41.0",
-		"webpack-cli": "^3.3.9"
-	},
-	"dependencies": {
-		"case": "^1.6.2",
-		"node-cache": "^5.0.0",
-		"php-parser": "^3.0.0-prerelease.9",
-		"xml-js": "^1.6.11"
-	}
+    "name": "vscode-magento-wizard",
+    "repository": {
+        "url": "https://github.com/viperet/vscode-magento-wizard",
+        "type": "git"
+    },
+    "bugs": {
+        "url": "https://github.com/viperet/vscode-magento-wizard/issues",
+        "email": "viperet@gmail.com"
+    },
+    "publisher": "viperet",
+    "displayName": "MagentoWizard",
+    "description": "Will ease life of the Magento 2 developer by automating some repeating tasks, like injecting dependency",
+    "version": "1.2.0",
+    "extensionKind": "workspace",
+    "preview": true,
+    "category": "Other",
+    "icon": "images/magento-wizard-logo.png",
+    "engines": {
+        "vscode": "^1.38.0"
+    },
+    "categories": [
+        "Other"
+    ],
+    "activationEvents": [
+        "onCommand:magentowizard.newExtension",
+        "onCommand:magentowizard.injectDependency",
+        "onCommand:magentowizard.addObserver",
+        "workspaceContains:/app/etc/env.php",
+        "workspaceContains:/app/etc/di.xml"
+    ],
+    "main": "./dist/extension.js",
+    "contributes": {
+        "commands": [
+            {
+                "command": "magentowizard.newExtension",
+                "title": "MagentoWizard: Create a new extension"
+            },
+            {
+                "command": "magentowizard.injectDependency",
+                "title": "MagentoWizard: Inject Dependency"
+            },
+            {
+                "command": "magentowizard.addObserver",
+                "title": "MagentoWizard: Add Observer"
+            },
+            {
+                "command": "magentowizard.addPlugin",
+                "title": "MagentoWizard: Add Plugin"
+            }
+        ],
+        "taskDefinitions": [
+            {
+                "type": "magento",
+                "required": [
+                    "command"
+                ],
+                "properties": {
+                    "command": {
+                        "type": "string",
+                        "description": "bin/magento command to run"
+                    },
+                    "args": {
+                        "type": "array",
+                        "description": "Optional command arguments"
+                    }
+                }
+            }
+        ]
+    },
+    "scripts": {
+        "_vscode:prepublish": "npm run compile",
+        "compile": "tsc -p ./",
+        "watch": "tsc -watch -p ./",
+        "pretest": "npm run compile",
+        "test": "node ./out/test/runTest.js",
+        "vscode:prepublish": "webpack --mode production",
+        "webpack": "webpack --mode development",
+        "webpack-dev": "webpack --mode development --watch",
+        "test-compile": "tsc -p ./"
+    },
+    "devDependencies": {
+        "@icetee/handlebars-loader": "^1.6.0",
+        "@types/glob": "^7.1.1",
+        "@types/mocha": "^5.2.6",
+        "@types/node": "^10.12.21",
+        "@types/vscode": "^1.38.0",
+        "glob": "^7.1.4",
+        "handlebars": "^4.3.1",
+        "mocha": "^6.1.4",
+        "ts-loader": "^6.1.2",
+        "tslint": "^5.12.1",
+        "typescript": "^3.3.1",
+        "vscode-test": "^1.2.0",
+        "webpack": "^4.41.0",
+        "webpack-cli": "^3.3.9"
+    },
+    "dependencies": {
+        "case": "^1.6.2",
+        "node-cache": "^5.0.0",
+        "php-parser": "^3.0.0-prerelease.9",
+        "xml-js": "^1.6.11"
+    }
 }

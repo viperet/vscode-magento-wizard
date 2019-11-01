@@ -6,6 +6,7 @@ import injectDependency from './actions/injectDependency';
 import addObserver from './actions/addObserver';
 import addPlugin from './actions/addPlugin';
 import Php, { ClassMethod, MethodVisibility } from './php';
+import { MagentoTaskProvider } from './actions/MagentoTaskProvider';
 
 async function getVendorExtension(options?: QuickPickCustomOptons): Promise<ExtensionInfo | undefined> {
     if (!options) {
@@ -218,6 +219,11 @@ export function activate(context: vscode.ExtensionContext) {
         }
         lastOpenedDocument = undefined;
     }));
+
+    let workspaceRoot = vscode.workspace.rootPath;
+	if (workspaceRoot) {
+        context.subscriptions.push(vscode.tasks.registerTaskProvider(MagentoTaskProvider.MagentoScriptType, new MagentoTaskProvider(workspaceRoot)));
+    }
 }
 
 // this method is called when your extension is deactivated
