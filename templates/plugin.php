@@ -7,8 +7,8 @@ class {{ name }}
     {
     }
 {{#ifEq pluginType 'before'}}
-    public function {{pluginType}}{{capital method.name}}(
-        \\{{className}} $subject,
+    public function {{pluginType}}{{plugin_name method.name}}(
+        \\{{className}} $subject{{#if method.parameters.length}},{{/if}}
         {{#each method.parameters}}
         {{#if type}}{{this.type}} {{/if}}${{this.name}}{{#if this.value}} = {{this.value}}{{/if}}{{#unless @last}},{{/unless}}
         {{/each}}
@@ -16,7 +16,7 @@ class {{ name }}
         return [{{#each method.parameters}}${{this.name}}{{#unless @last}}, {{/unless}}{{/each}}];
     }
 {{/ifEq }}{{#ifEq pluginType 'after'}}
-    public function {{pluginType}}{{capital method.name}}(
+    public function {{pluginType}}{{plugin_name method.name}}(
         \\{{className}} $subject,
         $result{{#if method.parameters.length}},{{/if}}
         {{#each method.parameters}}
@@ -26,7 +26,7 @@ class {{ name }}
         return $result;
     }
 {{/ifEq }}{{#ifEq pluginType 'around'}}
-    public function {{pluginType}}{{capital method.name}}(
+    public function {{pluginType}}{{pascal method.name}}(
         \\{{className}} $subject,
         callable $proceed{{#if method.parameters.length}},{{/if}}
         {{#each method.parameters}}
