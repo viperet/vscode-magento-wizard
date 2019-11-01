@@ -33,6 +33,17 @@ export default async function (extensionData: ExtensionInfo, className: string, 
             throw new Error('Error parsing '+magento.relativePath(diXmlUri));
         }
         let configNode;
+        if (!xml.elements) {
+            xml = {
+                "declaration": {
+                    "attributes":
+                    { "version": "1.0" }
+                },
+                "elements": [
+                    { "type": "element", "name": "config", "attributes": { "xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance", "xsi:noNamespaceSchemaLocation": "urn:magento:framework:ObjectManager/etc/config.xsd" }, "elements": [] }
+                ]
+            };
+        }
         for (let element of xml.elements) {
             if (element.type === 'element' && element.name === 'config') {
                 configNode = element;
