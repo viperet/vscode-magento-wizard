@@ -28,12 +28,17 @@ You can easily add observer for any event using "MagentoWizard: Add Observer" co
 - [x] Adding Plugin
 - [ ] Adding Route, Controller, Block, Layout, Template
 - [ ] Adding custom attribute to products, categories, orders, customers, etc.
-- [ ] Add Magento tasks like setup:upgrade, cache:clean to VSC tasks
+- [x] Add Magento tasks like setup:upgrade, cache:clean to VSC tasks
 - [ ] Watch for changes in *.xml, *.phtml, *.php and clear corresponding cache type (like [magento-cache-clean](https://github.com/mage2tv/magento-cache-clean) extension)
 - [ ] Go to definition function for class and template referrences in *.xml files
 - [ ] More templates
 
 ## Release Notes
+
+### 1.2.2
+
+Fixed bug in Plugin template.
+Added Task Provider for bin/magento commands
 
 ### 1.2.0
 
