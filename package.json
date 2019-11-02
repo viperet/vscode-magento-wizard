@@ -85,6 +85,23 @@
                     }
                 }
             }
+        ],
+        "problemMatchers": [
+            {
+                "name": "magento",
+                "label": "Magento",
+                "applyTo": "allDocuments",
+                "severity": "error",
+                "source": "bin/magento",
+                "fileLocation": "absolute",
+                "pattern": {
+                    "regexp": "PHP Parse error:  (.+?) in (.+?) on line (\\d+)()",
+                    "file": 2,
+                    "line": 3,
+                    "column": 4,
+                    "message": 1
+                }
+            }
         ]
     },
     "scripts": {

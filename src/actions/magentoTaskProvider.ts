@@ -84,16 +84,25 @@ export class MagentoTaskProvider implements vscode.TaskProvider {
                 type: MagentoTaskProvider.MagentoScriptType,
                 command,
                 args,
+                problemMatcher: ['$magento'],
             };
         }
-        var commandLine = (this.user ? `sudo -u ${this.user} ` : '') + `${this.php} bin/magento ${command} ${args.join(' ')}`;
-        return new vscode.Task(
+        const commandLine = (this.user ? `sudo -u ${this.user} ` : '') + `${this.php} bin/magento ${command} ${args.join(' ')}`;
+        const task = new vscode.Task(
             definition,
             this.workspaceFolder,
             `${command} ${args.join(' ')}`,
             MagentoTaskProvider.MagentoScriptType,
-            new vscode.ShellExecution(commandLine, { cwd: this.workspaceFolder.uri.fsPath })
+            new vscode.ShellExecution(commandLine, { cwd: this.workspaceFolder.uri.fsPath }),
+            ['$magento']
         );
+        task.presentationOptions = {
+            echo: true,
+            focus: true,
+            showReuseMessage: false,
+            clear: true,
+        }
+        return task;
     }
 }
 
