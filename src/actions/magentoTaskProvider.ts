@@ -1,5 +1,8 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
+import * as cp from 'child_process';
+import magento from '../magento';
+import * as fs from 'fs';
 
 interface MagentoTaskDefinition extends vscode.TaskDefinition {
     /**
@@ -16,18 +19,18 @@ interface MagentoTaskDefinition extends vscode.TaskDefinition {
 export class MagentoTaskProvider implements vscode.TaskProvider {
     static MagentoScriptType: string = 'magento';
     private tasks: vscode.Task[] | undefined;
+    private php: string;
+    private user: string;
 
-    // We use a CustomExecution task when state needs to be shared accross runs of the task or when
-    // the task requires use of some VS Code API to run.
-    // If you don't need to share state between runs and if you don't need to execute VS Code API in your task,
-    // then a simple ShellExecution or ProcessExecution should be enough.
-    // Since our build has this shared state, the CustomExecution is used below.
     private sharedState: string | undefined;
 
-    constructor(private workspaceRoot: string) { }
+    constructor(private workspaceFolder: vscode.WorkspaceFolder) {
+        this.php = vscode.workspace.getConfiguration('', this.workspaceFolder.uri).get('magentoWizard.tasks.php') || 'php';
+        this.user = vscode.workspace.getConfiguration('', this.workspaceFolder.uri).get('magentoWizard.tasks.user') || '';
+    }
 
     public async provideTasks(): Promise<vscode.Task[]> {
-        return this.getTasks();
+        return await this.getTasks();
     }
 
     public resolveTask(_task: vscode.Task): vscode.Task | undefined {
@@ -39,16 +42,39 @@ export class MagentoTaskProvider implements vscode.TaskProvider {
         return undefined;
     }
 
-    private getTasks(): vscode.Task[] {
+    private async getTasks(): Promise<vscode.Task[]> {
         if (this.tasks !== undefined) {
             return this.tasks;
         }
-        const commands: string[] = ['setup:upgrade', 'cache:clean', 'setup:static-content:deploy'];
-
+        if (!magento.fileExists(magento.appendUri(this.workspaceFolder.uri, 'bin/magento'))) {
+            // if there is no bin/magento in this workspace folder - return no tasks
+            return [];
+        }
+        let commandLine = (this.user ? `sudo -u ${this.user} ` : '') + `${this.php} bin/magento --no-ansi`;
         this.tasks = [];
-        commands.forEach(command => {
-                this.tasks!.push(this.getTask(command, []));
-        });
+        try {
+            let { stdout, stderr } = await exec(commandLine, { cwd: this.workspaceFolder.uri.fsPath });
+            if (stdout) {
+                let lines = stdout.split(/\r{0,1}\n/);
+                let matchCommands = false;
+                for (let line of lines) {
+                    if (line.length === 0) {
+                        continue;
+                    }
+                    if (line.match(/Available commands/)) {
+                        matchCommands = true;
+                    }
+
+                    if (matchCommands) {
+                        let matches = line.match(/^\s\s(?<command>.*?)\s/);
+                        if (matches && matches.groups) {
+                            this.tasks!.push(this.getTask(matches.groups.command, []));
+                        }
+                    }
+                }
+            }
+        } catch (err) {
+        }
         return this.tasks;
     }
 
@@ -60,7 +86,24 @@ export class MagentoTaskProvider implements vscode.TaskProvider {
                 args,
             };
         }
-        return new vscode.Task(definition, vscode.TaskScope.Workspace, `${command} ${args.join(' ')}`,
-            MagentoTaskProvider.MagentoScriptType, new vscode.ShellExecution(`php bin/magento ${command} ${args.join(' ')}`));
+        var commandLine = (this.user ? `sudo -u ${this.user} ` : '') + `${this.php} bin/magento ${command} ${args.join(' ')}`;
+        return new vscode.Task(
+            definition,
+            this.workspaceFolder,
+            `${command} ${args.join(' ')}`,
+            MagentoTaskProvider.MagentoScriptType,
+            new vscode.ShellExecution(commandLine, { cwd: this.workspaceFolder.uri.fsPath })
+        );
     }
+}
+
+function exec(command: string, options: cp.ExecOptions): Promise<{ stdout: string; stderr: string }> {
+	return new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {
+		cp.exec(command, options, (error, stdout, stderr) => {
+			if (error) {
+				reject({ error, stdout, stderr });
+			}
+			resolve({ stdout, stderr });
+		});
+	});
 }

@@ -11,7 +11,7 @@
     "publisher": "viperet",
     "displayName": "MagentoWizard",
     "description": "Will ease life of the Magento 2 developer by automating some repeating tasks, like injecting dependency",
-    "version": "1.2.0",
+    "version": "1.2.1",
     "extensionKind": "workspace",
     "preview": true,
     "category": "Other",
@@ -31,6 +31,25 @@
     ],
     "main": "./dist/extension.js",
     "contributes": {
+        "configuration": [
+            {
+                "title": "MagentoWizard",
+                "properties": {
+                    "magentoWizard.tasks.php": {
+                        "type": "string",
+                        "default": "php",
+                        "description": "Path to PHP binary",
+                        "scope": "window"
+                    },
+                    "magentoWizard.tasks.user": {
+                        "type": "string",
+                        "default": "",
+                        "markdownDescription": "Magento file system owner user, see [Overview of ownership and permissions](https://devdocs.magento.com/guides/v2.3/install-gde/prereq/file-sys-perms-over.html) for details. Current user will be used if empty.",
+                        "scope": "window"
+                    }
+                }
+            }
+        ],
         "commands": [
             {
                 "command": "magentowizard.newExtension",

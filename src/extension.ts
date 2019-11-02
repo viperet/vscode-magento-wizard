@@ -219,10 +219,10 @@ export function activate(context: vscode.ExtensionContext) {
         }
         lastOpenedDocument = undefined;
     }));
-
-    let workspaceRoot = vscode.workspace.rootPath;
-	if (workspaceRoot) {
-        context.subscriptions.push(vscode.tasks.registerTaskProvider(MagentoTaskProvider.MagentoScriptType, new MagentoTaskProvider(workspaceRoot)));
+    if (vscode.workspace.workspaceFolders) {
+        for(let workspaceFolder of vscode.workspace.workspaceFolders) {
+            context.subscriptions.push(vscode.tasks.registerTaskProvider(MagentoTaskProvider.MagentoScriptType, new MagentoTaskProvider(workspaceFolder)));
+        }
     }
 }
 
