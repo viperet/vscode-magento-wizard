@@ -55,7 +55,6 @@ async function getVendorExtension(options?: QuickPickCustomOptons): Promise<Exte
     }
 }
 
-
 export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(vscode.commands.registerCommand('magentowizard.newExtension', async () => {
         const data = await getVendorExtension({ custom: true });
@@ -139,7 +138,7 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(vscode.commands.registerCommand('magentowizard.addPlugin', async () => {
         let textEditor = vscode.window.activeTextEditor;
         let step = 1, totalSteps = 4;
-        // try {
+        try {
             let extensionData;
             if (textEditor) {
                 try {
@@ -203,9 +202,9 @@ export function activate(context: vscode.ExtensionContext) {
             if (!pluginName) { return; }
 
             await addPlugin(extensionData, className, method, pluginType, pluginName);
-        // } catch (e) {
-        //     vscode.window.showErrorMessage(e.message);
-        // }
+        } catch (e) {
+            vscode.window.showErrorMessage(e.message);
+        }
     }));
 
     let lastOpenedDocument: vscode.TextDocument | undefined;

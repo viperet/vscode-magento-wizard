@@ -26,6 +26,7 @@
         "onCommand:magentowizard.newExtension",
         "onCommand:magentowizard.injectDependency",
         "onCommand:magentowizard.addObserver",
+        "onCommand:magentowizard.addPlugin",
         "workspaceContains:/app/etc/env.php",
         "workspaceContains:/app/etc/di.xml"
     ],
