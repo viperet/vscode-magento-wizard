@@ -78,7 +78,7 @@ export class MagentoTaskProvider implements vscode.TaskProvider {
         return this.tasks;
     }
 
-    private getTask(command: string, args: string[], definition?: MagentoTaskDefinition): vscode.Task {
+    public getTask(command: string, args: string[], definition?: MagentoTaskDefinition): vscode.Task {
         if (definition === undefined) {
             definition = {
                 type: MagentoTaskProvider.MagentoScriptType,
@@ -106,7 +106,7 @@ export class MagentoTaskProvider implements vscode.TaskProvider {
     }
 }
 
-function exec(command: string, options: cp.ExecOptions): Promise<{ stdout: string; stderr: string }> {
+export function exec(command: string, options: cp.ExecOptions): Promise<{ stdout: string; stderr: string }> {
 	return new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {
 		cp.exec(command, options, (error, stdout, stderr) => {
 			if (error) {

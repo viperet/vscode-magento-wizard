@@ -5,6 +5,7 @@ import createExtension from './actions/createExtension';
 import injectDependency from './actions/injectDependency';
 import addObserver from './actions/addObserver';
 import addPlugin from './actions/addPlugin';
+import generateCatalog from './actions/generateCatalog';
 import Php, { ClassMethod, MethodVisibility } from './php';
 import { MagentoTaskProvider } from './actions/MagentoTaskProvider';
 
@@ -208,16 +209,38 @@ export function activate(context: vscode.ExtensionContext) {
         // }
     }));
 
+    context.subscriptions.push(vscode.commands.registerCommand('magentowizard.generateCatalog', async () => {
+        let textEditor = vscode.window.activeTextEditor;
+        try {
+            let extensionData;
+            if (textEditor) {
+                try {
+                    extensionData = await magento.getUriData(textEditor.document.uri);
+                } catch {}
+            }
+            if (!extensionData) {
+                return;
+            }
+            await generateCatalog(extensionData.workspace);
+        } catch (e) {
+            vscode.window.showErrorMessage(e.message);
+        }
+    }));
+
     let lastOpenedDocument: vscode.TextDocument | undefined;
     context.subscriptions.push(vscode.workspace.onDidOpenTextDocument(textDocument => {
         lastOpenedDocument = textDocument;
     }));
-    context.subscriptions.push(vscode.window.onDidChangeVisibleTextEditors(textEditors => {
-        const activeEditor = vscode.window.activeTextEditor;
-        if (lastOpenedDocument && activeEditor && activeEditor.document.uri.toString() === lastOpenedDocument.uri.toString()) {
-            magento.applyTemplate(activeEditor);
+    context.subscriptions.push(vscode.window.onDidChangeVisibleTextEditors(async textEditors => {
+        try {
+            const activeEditor = vscode.window.activeTextEditor;
+            if (lastOpenedDocument && activeEditor && activeEditor.document.uri.toString() === lastOpenedDocument.uri.toString()) {
+                await magento.applyTemplate(activeEditor);
+            }
+            lastOpenedDocument = undefined;
+        } catch (e) {
+            console.error(e);
         }
-        lastOpenedDocument = undefined;
     }));
     if (vscode.workspace.workspaceFolders) {
         for(let workspaceFolder of vscode.workspace.workspaceFolders) {
