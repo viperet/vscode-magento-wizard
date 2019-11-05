@@ -53,7 +53,7 @@ export class MagentoTaskProvider implements vscode.TaskProvider {
         let commandLine = (this.user ? `sudo -u ${this.user} ` : '') + `${this.php} bin/magento --no-ansi`;
         this.tasks = [];
         try {
-            let { stdout, stderr } = await exec(commandLine, { cwd: this.workspaceFolder.uri.fsPath });
+            let { stdout, stderr } = await magento.exec(commandLine, { cwd: this.workspaceFolder.uri.fsPath });
             if (stdout) {
                 let lines = stdout.split(/\r{0,1}\n/);
                 let matchCommands = false;
@@ -106,13 +106,3 @@ export class MagentoTaskProvider implements vscode.TaskProvider {
     }
 }
 
-function exec(command: string, options: cp.ExecOptions): Promise<{ stdout: string; stderr: string }> {
-	return new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {
-		cp.exec(command, options, (error, stdout, stderr) => {
-			if (error) {
-				reject({ error, stdout, stderr });
-			}
-			resolve({ stdout, stderr });
-		});
-	});
-}

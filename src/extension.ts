@@ -156,7 +156,7 @@ export function activate(context: vscode.ExtensionContext) {
             let className = await createQuickPickCustom(magento.getClasses(extensionData), { custom: true, step, totalSteps, title: 'Please enter or select class in which you want to intercept method call' });
             if (!className) { return; }
 
-            let classFile = magento.getClassFile(extensionData, className);
+            let classFile = await magento.getClassFile(extensionData, className);
 
             let methods: ClassMethod[] = [];
             if (classFile) {
@@ -174,7 +174,9 @@ export function activate(context: vscode.ExtensionContext) {
             step++;
             let methodSelected= await createQuickPickCustom(methodsNames, { custom: true, step, totalSteps, title: 'Please enter or select method you want to intercept' });
             if (!methodSelected) { return; }
-            let methodName = methodSelected.match(/^(.*?)\(/)![1];
+            const methodMatches = methodSelected.match(/^([a-zA-Z0-9_]+)\(?/);
+            if (!methodMatches) { return; }
+            let methodName = methodMatches[1];
             let method = methods.find(function (this: string, method) { return method.name === this; }, methodName);
             if (!method) {
                 method = {
@@ -207,7 +209,7 @@ export function activate(context: vscode.ExtensionContext) {
         }
     }));
 
-    let lastOpenedDocument: vscode.TextDocument | undefined;
+    let lastOpenedDocument: vscode .TextDocument | undefined;
     context.subscriptions.push(vscode.workspace.onDidOpenTextDocument(textDocument => {
         lastOpenedDocument = textDocument;
     }));

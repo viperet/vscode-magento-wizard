@@ -5,6 +5,7 @@ import eventsList from './eventsList';
 import * as Case from 'case';
 import * as convert  from 'xml-js';
 import * as NodeCache from 'node-cache';
+import * as cp from 'child_process';
 const fs = workspace.fs;
 
 import { TextEncoder, TextDecoder } from 'util';
@@ -43,6 +44,7 @@ class Magento {
     decoder: (input?: Uint8Array | Uint8ClampedArray | Uint16Array | Uint32Array | Int8Array | Int16Array | Int32Array | Float32Array | Float64Array | DataView | ArrayBuffer | null | undefined, options?: any | undefined) => string;
 
     private uriDataCache: NodeCache;
+    private composerCache: NodeCache;
 
     // @ts-ignore
     folder: WorkspaceFolder;
@@ -53,6 +55,7 @@ class Magento {
         let decoder = new TextDecoder();
         this.decoder = decoder.decode.bind(decoder);
         this.uriDataCache = new NodeCache({ useClones: false, stdTTL: 60, checkperiod: 60 });
+        this.composerCache = new NodeCache({ useClones: false, stdTTL: 60, checkperiod: 60 });
     }
 
     /**
@@ -120,8 +123,8 @@ class Magento {
                 data.ext = matches.groups.ext;
                 data.extensionFolder = `${matches.groups.rootPath}vendor/${matches.groups.vendor}/${matches.groups.extension}/`;
                 let moduleXmlUri = this.appendUri(currentWorkspace.uri, data.extensionFolder, 'etc', 'module.xml');
+                let name = this.uriDataCache.get(data.extensionFolder) as string[];
                 try {
-                    let name = this.uriDataCache.get(moduleXmlUri.fsPath) as string[];
                     if (name === undefined) {
                         // handle cache miss - parse etc/module.xml
                         const moduleXml = await this.readFile(moduleXmlUri);
@@ -131,13 +134,13 @@ class Magento {
                         }) as any;
                         name = xml.config.module._attributes.name.split('_');
                         // store extension data in cache
-                        this.uriDataCache.set(moduleXmlUri.fsPath, name);
+                        this.uriDataCache.set(data.extensionFolder, name);
                     }
                     data.vendor = name[0];
                     data.extension = name[1];
                 } catch (e) {
                     console.log(e);
-                    throw new Error('Error parsing '+this.relativePath(moduleXmlUri));
+                    //throw new Error('Error parsing '+this.relativePath(moduleXmlUri));
                 }
             }
         }
@@ -339,7 +342,7 @@ class Magento {
         for(let eventName in eventsList) {
             let data: string[] = [];
             for (let dataName in eventsList[eventName].data) {
-                data.push(dataName);
+                data.push('$'+dataName);
             }
             values.push({
                 label: eventName,
@@ -440,23 +443,52 @@ class Magento {
      * @returns {(Uri | undefined)}
      * @memberof Magento
      */
-    getClassFile(extension: ExtensionInfo, className: string): Uri | undefined {
+    async getClassFile(extension: ExtensionInfo, className: string): Promise<Uri | undefined> {
         const classPath = className.split('\\').filter(Boolean);
         let file: Uri;
         if (extension.vendor === classPath[0] && extension.extension === classPath[1]) {
             // class from current extension
             file = extension.extensionUri;
         } else if (classPath[0] === 'Magento') {
-            file = this.appendUri(extension.workspace.uri, 'vendor/magento/module-'+Case.kebab(classPath[1]));
+            if (classPath[1] === 'Framework') {
+                file = this.appendUri(extension.workspace.uri, 'vendor/magento/framework');
+            } else {
+                file = this.appendUri(extension.workspace.uri, 'vendor/magento/module-'+Case.kebab(classPath[1]));
+            }
         } else {
-            return undefined;
+            // use composer autoloader to find file as a last resort
+            return await this.composerFindFile(className);
         }
         for(let i = 2; i < classPath.length-1; ++i) {
             file = this.appendUri(file, classPath[i]);
         }
         file = this.appendUri(file, classPath.pop()+'.php');
+        if (!await this.fileExists(file)) {
+            // if file was not found - use composer autoloader
+            return await this.composerFindFile(className);
+        }
         return file;
     }
+    async composerFindFile(className: string): Promise<Uri | undefined> {
+        try {
+            let fileName: Uri | undefined = this.composerCache.get(className);
+            if (fileName === undefined) {
+                const _className = className.replace(/^\\?(.*)$/, '$1');
+                const php = workspace.getConfiguration('', this.folder.uri).get('magentoWizard.tasks.php') || 'php';
+                const commandLine = `${php} -r 'echo (include "vendor/autoload.php")->findFile("${_className}");'`;
+                const { stdout, stderr } = await this.exec(commandLine, { cwd: this.folder.uri.fsPath });
+                if (stdout.startsWith(this.appendUri(this.folder.uri,'vendor','composer').fsPath)) {
+                    const relativePath = workspace.asRelativePath(posix.normalize(stdout));
+                    fileName = this.appendUri(this.folder.uri, relativePath);
+                    this.composerCache.set(className, fileName);
+                }
+            }
+            return fileName;
+        } catch {
+            return undefined;
+        }
+    }
+
     async getClassMethods(classFile: Uri): Promise<ClassMethod[]> {
         let php = new Php();
         const data = await this.getUriData(classFile);
@@ -469,6 +501,18 @@ class Magento {
         // TODO Add proper class name validation, check for reserved words
         return className.match(/^[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*(\\[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*)*$/);
     }
+
+    exec(command: string, options: cp.ExecOptions): Promise<{ stdout: string; stderr: string }> {
+        return new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {
+            cp.exec(command, options, (error, stdout, stderr) => {
+                if (error) {
+                    reject({ error, stdout, stderr });
+                }
+                resolve({ stdout, stderr });
+            });
+        });
+    }
+
 }
 
 export default new Magento();

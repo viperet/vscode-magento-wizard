@@ -111,6 +111,31 @@ class Php {
     }
 
     /**
+     * Finds node corresponding to the interface with given name
+     *
+     * @param {string} interfaceName
+     * @param {(Block | Node)} [block]
+     * @returns {(Node | null)}
+     * @memberof Php
+     */
+    findInterface(interfaceName: string, block?: Block | Node): Node | null {
+        if (!block) {
+            block = this.ast!;
+        }
+        if (block.kind === 'interface' &&  block.name && block.name.name === interfaceName) {
+            return block;
+        } else if ('children' in block && (block.kind === 'program' || block.kind === 'namespace')) {
+            for(let i = 0; i < block.children.length; i++) {
+                let node = this.findInterface(interfaceName, block.children[i]);
+                if (node) {
+                    return node;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
      * Finds constructor node of the given class node
      *
      * @param {Node} classNode
@@ -133,7 +158,10 @@ class Php {
         let methods: ClassMethod[] = [];
         let classNode = this.findClass(className) as any;
         if (!classNode) {
-            throw new Error(`Can't find class '${className}'`);
+            classNode = this.findInterface(className) as any;
+        }
+        if (!classNode) {
+            return [];
         }
         for (let item of classNode.body as any[]) {
             if (item.kind === 'method') {

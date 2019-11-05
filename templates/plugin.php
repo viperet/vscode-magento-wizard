@@ -7,6 +7,7 @@ class {{ name }}
     {
     }
 {{#ifEq pluginType 'before'}}
+
     public function {{pluginType}}{{plugin_name method.name}}(
         \\{{className}} $subject{{#if method.parameters.length}},{{/if}}
         {{#each method.parameters}}
@@ -35,6 +36,5 @@ class {{ name }}
     ) {
         $result = $proceed({{#each method.parameters}}${{this.name}}{{#unless @last}}, {{/unless}}{{/each}});
         return $result;
-    }
-{{/ifEq }}
+    }{{/ifEq }}
 }
