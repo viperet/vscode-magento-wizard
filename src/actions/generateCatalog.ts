@@ -1,21 +1,27 @@
 import { workspace, WorkspaceFolder, tasks, ConfigurationTarget, TaskPanelKind, TaskExecution, extensions, window } from 'vscode';
-import * as convert  from 'xml-js';
+import * as convert from 'xml-js';
 import magento from '../magento';
 import { MagentoTaskProvider, exec } from './MagentoTaskProvider';
 
 const catalogOldFilename = '.vscode/catalog_tmp.xml';
 const catalogNewFilename = '.vscode/catalog.xml';
 let redhatXmlInstalled = !!extensions.getExtension('redhat.vscode-xml');
+const installXmlButton = 'Install XML extension';
 
 export default async function (workspaceFolder: WorkspaceFolder) {
+    let buttons = ['Yes'];
+    if (!redhatXmlInstalled) {
+        buttons.push(installXmlButton);
+    }
     const response = await window.showInformationMessage(
-        'This command will generate XML catalog'+
-        ' with Magento 2 XML DTDs, which can be used for validation and completition in various XML configuration files.\n'+
+        'This command will generate XML catalog' +
+        ' with Magento 2 XML DTDs, which can be used for validation and completition in various XML configuration files.\n' +
         'Do you want to continue?',
         { modal: true },
-        'Yes', 'Install XML extension');
+        ...buttons
+    );
 
-    if (response === 'Install XML extension') {
+    if (response === installXmlButton) {
         try {
             let { stdout, stderr } = await exec('code --install-extension redhat.vscode-xml', {});
             console.log(stdout, stderr);
@@ -24,10 +30,12 @@ export default async function (workspaceFolder: WorkspaceFolder) {
         } catch {
             window.showInformationMessage('Error while installing Redhat XML extension, you can try to install it manually.', { modal: true });
         }
-    } else if ( !response ) {
+    } else if (!response) {
         return;
     }
-    // TODO Create .vscode folder if not exists in workspaceFolder
+    // Create .vscode folder if not exists in workspaceFolder
+    await workspace.fs.createDirectory(magento.appendUri(workspaceFolder.uri, '.vscode'));
+
     const taskProvider = new MagentoTaskProvider(workspaceFolder);
     const catalogTask = taskProvider.getTask('dev:urn-catalog:generate', [catalogOldFilename]);
     let taskExecution: TaskExecution;
@@ -42,7 +50,7 @@ export default async function (workspaceFolder: WorkspaceFolder) {
         taskExecution = await tasks.executeTask(catalogTask);
     } catch (e) {
         console.error(e);
-        throw new Error('Error executing '+catalogTask.name);
+        throw new Error('Error executing ' + catalogTask.name);
     }
 
 }
@@ -74,7 +82,7 @@ async function convertCatalog(workspaceFolder: WorkspaceFolder) {
                     xmlCatalog.catalog.system.push({
                         _attributes: {
                             systemId: resource._attributes.url,
-//                            uri: workspace.asRelativePath(resource._attributes.location),
+                            //                            uri: workspace.asRelativePath(resource._attributes.location),
                             uri: resource._attributes.location,
                         }
                     });

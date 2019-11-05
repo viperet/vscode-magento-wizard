@@ -58,6 +58,22 @@ async function getVendorExtension(options?: QuickPickCustomOptons): Promise<Exte
 
 
 export function activate(context: vscode.ExtensionContext) {
+
+    let redhatXmlInstalled = !!vscode.extensions.getExtension('redhat.vscode-xml');
+    if (redhatXmlInstalled) {
+        let buttons: string[] = ['Run it now!'];
+        // TODO find Magento 2 workspace folder (if any)
+        vscode.window.showInformationMessage('Now you can easily create XML catalog file and add it to XML extenstion.\n'+
+            'Just run "MagentoWizard: Generate XML Catalog" command inside a Magento 2 workspace, everything else will be done automatically! Magic!',
+            ...buttons
+        );
+    } else {
+        // TODO write text recommending XML extension
+        vscode.window.showInformationMessage('Now you can easily create XML catalog file and add it to XML extenstion.\n'+
+            'Just run "MagentoWizard: Generate XML Catalog" command inside a Magento 2 workspace, everything else will be done automatically! Magic!');
+    }
+
+
     context.subscriptions.push(vscode.commands.registerCommand('magentowizard.newExtension', async () => {
         const data = await getVendorExtension({ custom: true });
         if (!data) {
