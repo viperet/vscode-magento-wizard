@@ -11,7 +11,7 @@
     "publisher": "viperet",
     "displayName": "MagentoWizard",
     "description": "Will ease life of the Magento 2 developer by automating some repeating tasks, like injecting dependency",
-    "version": "1.2.2",
+    "version": "1.2.5",
     "extensionKind": "workspace",
     "preview": true,
     "category": "Other",
@@ -26,8 +26,8 @@
         "onCommand:magentowizard.newExtension",
         "onCommand:magentowizard.injectDependency",
         "onCommand:magentowizard.addObserver",
-        "onCommand:magentowizard.pluginObserver",
         "onCommand:magentowizard.generateCatalog",
+        "onCommand:magentowizard.addPlugin",
         "workspaceContains:/app/etc/env.php",
         "workspaceContains:/app/etc/di.xml"
     ],
@@ -46,7 +46,7 @@
                     "magentoWizard.tasks.user": {
                         "type": "string",
                         "default": "",
-                        "markdownDescription": "Magento file system owner user, see [Overview of ownership and permissions](https://devdocs.magento.com/guides/v2.3/install-gde/prereq/file-sys-perms-over.html) for details. Current user will be used if empty.",
+                        "markdownDescription": "Magento file system owner user, see [Overview of ownership and permissions](https://devdocs.magento.com/guides/v2.3/install-gde/prereq/file-sys-perms-over.html) for details. MagentoWizard uses `sudo -u <username> bin/magento`, so you should [configure your system](https://github.com/viperet/vscode-magento-wizard/wiki/Allow-sudo-to-run-commands-as-certain-user-without-password) to allow sudo without asking a password.  Current user will be used if empty.",
                         "scope": "resource"
                     }
                 }

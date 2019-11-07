@@ -30,12 +30,11 @@ async function getVendorExtension(options?: QuickPickCustomOptons): Promise<Exte
     }
     magento.folder = currentWorkspace;
     let vendors = magento.getVendors();
-    let vendor = await createQuickPickCustom(vendors, Object.assign({}, options, { title: 'Please select Vendor' }));
+    let vendor = await createQuickPickCustom(vendors, Object.assign({}, options, { title: options.custom ? 'Please enter Vendor name' : 'Please select Vendor' }));
     let extension;
     if (vendor) {
         options.step++;
         if (options.custom) {
-//                extension = await vscode.window.showInputBox({ placeHolder: 'Enter Extension Name'});
             extension = await createQuickPickCustom([], Object.assign({}, options, { title: 'Enter Extension Name' }));
         } else {
             let extensions = magento.getExtensions(vendor);
@@ -55,7 +54,6 @@ async function getVendorExtension(options?: QuickPickCustomOptons): Promise<Exte
         return undefined;
     }
 }
-
 
 export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(vscode.commands.registerCommand('magentowizard.newExtension', async () => {
@@ -140,7 +138,7 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(vscode.commands.registerCommand('magentowizard.addPlugin', async () => {
         let textEditor = vscode.window.activeTextEditor;
         let step = 1, totalSteps = 4;
-        // try {
+        try {
             let extensionData;
             if (textEditor) {
                 try {
@@ -158,7 +156,7 @@ export function activate(context: vscode.ExtensionContext) {
             let className = await createQuickPickCustom(magento.getClasses(extensionData), { custom: true, step, totalSteps, title: 'Please enter or select class in which you want to intercept method call' });
             if (!className) { return; }
 
-            let classFile = magento.getClassFile(extensionData, className);
+            let classFile = await magento.getClassFile(extensionData, className);
 
             let methods: ClassMethod[] = [];
             if (classFile) {
@@ -176,7 +174,9 @@ export function activate(context: vscode.ExtensionContext) {
             step++;
             let methodSelected= await createQuickPickCustom(methodsNames, { custom: true, step, totalSteps, title: 'Please enter or select method you want to intercept' });
             if (!methodSelected) { return; }
-            let methodName = methodSelected.match(/^(.*?)\(/)![1];
+            const methodMatches = methodSelected.match(/^([a-zA-Z0-9_]+)\(?/);
+            if (!methodMatches) { return; }
+            let methodName = methodMatches[1];
             let method = methods.find(function (this: string, method) { return method.name === this; }, methodName);
             if (!method) {
                 method = {
@@ -204,9 +204,9 @@ export function activate(context: vscode.ExtensionContext) {
             if (!pluginName) { return; }
 
             await addPlugin(extensionData, className, method, pluginType, pluginName);
-        // } catch (e) {
-        //     vscode.window.showErrorMessage(e.message);
-        // }
+        } catch (e) {
+            vscode.window.showErrorMessage(e.message);
+        }
     }));
 
     context.subscriptions.push(vscode.commands.registerCommand('magentowizard.generateCatalog', async () => {
