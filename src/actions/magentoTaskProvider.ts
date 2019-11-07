@@ -102,6 +102,7 @@ export class MagentoTaskProvider implements vscode.TaskProvider {
             };
         }
         this.readConfig();
+        args = args.map(arg => arg.replace(/(["\s'$`\\])/, '\\$1'));
         const commandLine = (this.user ? `sudo -u ${this.user} ` : '') + `${this.php} bin/magento ${command} ${args.join(' ')}`;
         const task = new vscode.Task(
             definition,
