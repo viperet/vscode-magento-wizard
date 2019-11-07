@@ -4,17 +4,18 @@ This extension will ease life of the Magento 2 developer by automating some repe
 
 ## Features
 
-Creating new extension using `MagentoWizard: Create a new extension` command:
+- When you create new file (for example di.xml), extension provides handy default content for it. Works for some xml file, blocks, models, controllers, setup scripts, etc.
+- Creating new extension using `MagentoWizard: Create a new extension` command:
 
 ![Creating new extension](https://github.com/viperet/vscode-magento-wizard/raw/master/images/create_extension.gif)
 
-When you create new file (for example di.xml), extension provides handy default content for it. Works for some xml file, blocks, models, controllers, setup scripts, etc.
-
-When editing class file you can inject new dependency by pressing `F1` and using `MagentoWizard: Inject Dependency` command.
+- When editing class file you can inject new dependency by pressing `F1` and using `MagentoWizard: Inject Dependency` command.
 
 ![Dependency Injection ](https://github.com/viperet/vscode-magento-wizard/raw/master/images/dependency-injection.gif)
 
-You can easily add observer for any event using "MagentoWizard: Add Observer" command, MagentoWizard even knows what data is passed to observers for some popular events.
+- You can easily add observer for any event using "MagentoWizard: Add Observer" command, MagentoWizard even knows what data is passed to observers for some popular events.
+- Ability to run all bin/magento commands using VSC Run Task command
+- Generation of [XML Catalog](https://en.wikipedia.org/wiki/XML_catalog) file for Magento 2 XML DTD files. Run `MagentoWizard: Generate XML Catalog` command and extension will create XML Catalog file in the correct format. It will be added to the [XML](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-xml) extension config if that extension is installed.
 
 ### Planned features
 
@@ -34,6 +35,10 @@ You can easily add observer for any event using "MagentoWizard: Add Observer" co
 - [ ] More templates
 
 ## Release Notes
+
+### 1.3.0
+
+Added `MagentoWizard: Generate XML Catalog` command
 
 ### 1.2.2
 
