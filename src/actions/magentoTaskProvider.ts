@@ -19,14 +19,15 @@ interface MagentoTaskDefinition extends vscode.TaskDefinition {
 export class MagentoTaskProvider implements vscode.TaskProvider {
     static MagentoScriptType: string = 'magento';
     private tasks: vscode.Task[] | undefined;
-    private php: string;
-    private user: string;
+    private php: string = 'php';
+    private user: string = '';
+    private config: vscode.WorkspaceConfiguration;
 
     private sharedState: string | undefined;
 
     constructor(private workspaceFolder: vscode.WorkspaceFolder) {
-        this.php = vscode.workspace.getConfiguration('', this.workspaceFolder.uri).get('magentoWizard.tasks.php') || 'php';
-        this.user = vscode.workspace.getConfiguration('', this.workspaceFolder.uri).get('magentoWizard.tasks.user') || '';
+        this.config = vscode.workspace.getConfiguration('', this.workspaceFolder.uri);
+        this.readConfig();
     }
 
     public async provideTasks(): Promise<vscode.Task[]> {
@@ -50,8 +51,10 @@ export class MagentoTaskProvider implements vscode.TaskProvider {
             // if there is no bin/magento in this workspace folder - return no tasks
             return [];
         }
+        this.readConfig();
         let commandLine = (this.user ? `sudo -u ${this.user} ` : '') + `${this.php} bin/magento --no-ansi`;
         this.tasks = [];
+
         try {
             let { stdout, stderr } = await magento.exec(commandLine, { cwd: this.workspaceFolder.uri.fsPath });
             if (stdout) {
@@ -74,6 +77,17 @@ export class MagentoTaskProvider implements vscode.TaskProvider {
                 }
             }
         } catch (err) {
+            if (err.stderr.match(/askpass/)) {
+                vscode.window.showErrorMessage(`Can't run bin/magento as "${this.user}", please allow to sudo as that user without a password`, 'More info').then(value => {
+                    if (value) {
+                        vscode.env.openExternal(vscode.Uri.parse('https://github.com/viperet/vscode-magento-wizard/wiki/Allow-sudo-to-run-commands-as-certain-user-without-password'));
+                    }
+                });
+            } else {
+                vscode.window.showErrorMessage(err.stderr);
+            }
+            this.tasks = undefined;
+            return [];
         }
         return this.tasks;
     }
@@ -87,6 +101,7 @@ export class MagentoTaskProvider implements vscode.TaskProvider {
                 problemMatcher: ['$magento'],
             };
         }
+        this.readConfig();
         const commandLine = (this.user ? `sudo -u ${this.user} ` : '') + `${this.php} bin/magento ${command} ${args.join(' ')}`;
         const task = new vscode.Task(
             definition,
@@ -103,6 +118,11 @@ export class MagentoTaskProvider implements vscode.TaskProvider {
             clear: true,
         }
         return task;
+    }
+
+    private readConfig() {
+        this.php = this.config.get('magentoWizard.tasks.php') || 'php';
+        this.user = this.config.get('magentoWizard.tasks.user') || '';
     }
 }
 
