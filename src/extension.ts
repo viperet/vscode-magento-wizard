@@ -212,16 +212,18 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(vscode.commands.registerCommand('magentowizard.generateCatalog', async () => {
         let textEditor = vscode.window.activeTextEditor;
         try {
-            let extensionData;
-            if (textEditor) {
-                try {
-                    extensionData = await magento.getUriData(textEditor.document.uri);
-                } catch {}
+            let currentWorkspace;
+            if (!vscode.workspace.workspaceFolders) {
+                throw new Error('No open workspace folders');
             }
-            if (!extensionData) {
-                return;
+            if (vscode.workspace.workspaceFolders.length > 1) {
+                currentWorkspace = await vscode.window.showWorkspaceFolderPick();
+            } else {
+                currentWorkspace = vscode.workspace.workspaceFolders[0];
             }
-            await generateCatalog(extensionData.workspace);
+            if (currentWorkspace) {
+                await generateCatalog(context, currentWorkspace);
+            }
         } catch (e) {
             vscode.window.showErrorMessage(e.message);
         }
