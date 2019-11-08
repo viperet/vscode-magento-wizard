@@ -8,6 +8,7 @@ import addPlugin from './actions/addPlugin';
 import generateCatalog from './actions/generateCatalog';
 import Php, { ClassMethod, MethodVisibility } from './php';
 import { MagentoTaskProvider } from './actions/MagentoTaskProvider';
+import { definitionProvider } from './actions/definitionProvider';
 
 async function getVendorExtension(options?: QuickPickCustomOptons): Promise<ExtensionInfo | undefined> {
     if (!options) {
@@ -249,6 +250,8 @@ export function activate(context: vscode.ExtensionContext) {
             context.subscriptions.push(vscode.tasks.registerTaskProvider(MagentoTaskProvider.MagentoScriptType, new MagentoTaskProvider(workspaceFolder)));
         }
     }
+
+    context.subscriptions.push(vscode.languages.registerDefinitionProvider('xml', definitionProvider));
 }
 
 // this method is called when your extension is deactivated
