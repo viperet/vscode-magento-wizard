@@ -32,6 +32,8 @@ export interface UriData extends ExtensionInfo {
     name: string;
     /** Filename extension (php,xml,js) */
     ext: string;
+    /** Magento area (frontend,adminhtml) */
+    area: string;
 }
 
 export interface Docblock {
@@ -100,7 +102,7 @@ class Magento {
             throw new Error('File not in the workspace (not saved yet?)');
         }
         this.folder = currentWorkspace;
-        let data: UriData = { workspace: currentWorkspace, vendor: '', extension: '', type: '', namespace: '', name: '', ext: '', extensionFolder: '', extensionUri: currentWorkspace.uri };
+        let data: UriData = { workspace: currentWorkspace, vendor: '', extension: '', type: '', namespace: '', name: '', ext: '', extensionFolder: '', extensionUri: currentWorkspace.uri, area: ''};
         let relativePath = workspace.asRelativePath(uri);
         let path: string[] = [];
         // Extension in /app/code
@@ -148,6 +150,9 @@ class Magento {
         if (path && path.length > 0) {
             data.type = path[0].toLowerCase();
             data.namespace = [data.vendor, data.extension, ...path].join('\\');
+            if (['base','frontend','adminhtml'].includes(path[1])) {
+                data.area = path[1];
+            }
         }
         data.extensionUri = this.appendUri(currentWorkspace.uri, data.extensionFolder);
         return data;
@@ -434,6 +439,18 @@ class Magento {
         return workspace.asRelativePath(uri);
     }
 
+    getExtensionFolder(vendor: string, extension: string): Uri {
+        if (vendor === 'Magento') {
+            if (extension === 'Framework') {
+                return this.appendUri(this.folder.uri, 'vendor/magento/framework');
+            } else {
+                return this.appendUri(this.folder.uri, 'vendor/magento/module-'+Case.kebab(extension));
+            }
+        } else {
+            return this.appendUri(this.folder.uri, 'app/code', vendor, extension);
+        }
+    }
+
     /**
      * Get file Uri by class name
      *  Can return Uri of unexisting file
@@ -469,6 +486,7 @@ class Magento {
         }
         return file;
     }
+
     async composerFindFile(className: string): Promise<Uri | undefined> {
         try {
             let fileName: Uri | undefined = this.composerCache.get(className);
@@ -489,6 +507,13 @@ class Magento {
         }
     }
 
+    /**
+     * Parses PHP file and returns array of class methods
+     *
+     * @param {Uri} classFile
+     * @returns {Promise<ClassMethod[]>}
+     * @memberof Magento
+     */
     async getClassMethods(classFile: Uri): Promise<ClassMethod[]> {
         let php = new Php();
         const data = await this.getUriData(classFile);
@@ -511,6 +536,47 @@ class Magento {
                 resolve({ stdout, stderr });
             });
         });
+    }
+
+    async getViewFile(data: UriData, viewFile: string): Promise<Uri | undefined> {
+        const fileReferenceRe = /^(?<vendor>[a-zA-Z0-9]+)_(?<extension>[a-zA-Z0-9]+)::(?<path>[-a-zA-Z0-9@$=%#_/.]+)\.(?<ext>[-a-zA-Z0-9]+)$/;
+        const matches = viewFile.trim().match(fileReferenceRe);
+        if (matches) {
+            if (matches.groups) {
+                let extensionUri: Uri;
+                if (matches.groups.vendor === data.vendor && matches.groups.extension === data.extension) {
+                    extensionUri = data.extensionUri;
+                } else if(matches.groups.vendor === 'Magento') {
+                    extensionUri = this.appendUri(data.workspace.uri, 'vendor', 'magento', 'module-' + Case.kebab(matches.groups.extension));
+                } else {
+                    return undefined;
+                }
+
+                if (data.type === 'view' && data.ext === 'xml') {
+                    // file is XML layout
+                    let fileType;
+                    if (matches.groups.ext === 'phtml') {
+                        fileType = 'templates';
+                    } else {
+                        fileType = 'web';
+                    }
+                    if (!data.area) {
+                        data.area = 'base';
+                    }
+
+                    let viewFileUri = this.appendUri(extensionUri, 'view', data.area, fileType, matches.groups.path + '.' + matches.groups.ext);
+                    if (await this.fileExists(viewFileUri)) {
+                        return viewFileUri;
+                    }
+                    // if not found - try to look into 'base' folder
+                    viewFileUri = this.appendUri(extensionUri, 'view', 'base', fileType, matches.groups.path + '.' + matches.groups.ext);
+                    if (await this.fileExists(viewFileUri)) {
+                        return viewFileUri;
+                    }
+                }
+            }
+        }
+        return undefined;
     }
 
 }
