@@ -47,7 +47,7 @@ export class MagentoTaskProvider implements vscode.TaskProvider {
         if (this.tasks !== undefined) {
             return this.tasks;
         }
-        if (!magento.fileExists(magento.appendUri(this.workspaceFolder.uri, 'bin/magento'))) {
+        if (!await magento.fileExists(magento.appendUri(this.workspaceFolder.uri, 'bin/magento'))) {
             // if there is no bin/magento in this workspace folder - return no tasks
             return [];
         }

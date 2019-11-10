@@ -15,7 +15,7 @@ export default async function (extensionData: ExtensionInfo, eventName: string, 
         throw new Error(magento.relativePath(observerPhpUri)+' already exists');
     }
 
-    if (!magento.fileExists(eventsXmlUri)) {
+    if (!await magento.fileExists(eventsXmlUri)) {
         // file not found
         let eventsXml = require('../../templates/etc/events.xml')(Object.assign({ eventName, observerName }, extensionData));
         magento.writeFile(eventsXmlUri, eventsXml);
@@ -61,7 +61,13 @@ export default async function (extensionData: ExtensionInfo, eventName: string, 
         }
     }
 
-    let observerData = Object.assign({ data: eventsList[eventName].data }, await magento.getUriData(observerPhpUri));
+    let eventData;
+    if (eventsList[eventName]) {
+        eventData = eventsList[eventName].data;
+    } else {
+        eventData = { data: 'string' };
+    }
+    let observerData = Object.assign({ data: eventData }, await magento.getUriData(observerPhpUri));
     let observerPhp = require('../../templates/observer.php')(observerData);
     await magento.writeFile(observerPhpUri, observerPhp);
     await window.showTextDocument(observerPhpUri);

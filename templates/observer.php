@@ -11,7 +11,7 @@ class {{ name }} implements \Magento\Framework\Event\ObserverInterface
     {
         {{#if data}}
         {{#each data}}
-        /** @var \\{{this}} ${{@key}} */
+        /** @var {{this}} ${{@key}} */
         ${{@key}} = $observer->getData('{{@key}}');
         {{/each}}
         {{else}}

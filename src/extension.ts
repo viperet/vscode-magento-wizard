@@ -120,7 +120,7 @@ export function activate(context: vscode.ExtensionContext) {
             if (!extensionData || !extensionData.vendor || !extensionData.extension) {
                 return;
             }
-            let eventName = await createQuickPickCustom(magento.getEvents(), { step, totalSteps, title: 'Please select event name' });
+            let eventName = await createQuickPickCustom(magento.getEvents(), { custom: true, step, totalSteps, title: 'Please select event name' });
             if (eventName) {
                 var observerName = await vscode.window.showInputBox({
                     prompt: 'Enter observer class name',

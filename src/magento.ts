@@ -9,7 +9,7 @@ import * as cp from 'child_process';
 const fs = workspace.fs;
 
 import { TextEncoder, TextDecoder } from 'util';
-import Php, { MethodVisibility, ClassMethod } from './php';
+import Php, { MethodVisibility, ClassMethod, reservedWords } from './php';
 
 export interface ExtensionInfo {
     /** Workspace folder of the extension */
@@ -524,7 +524,13 @@ class Magento {
 
     validateClassName(className: string) {
         // TODO Add proper class name validation, check for reserved words
-        return className.match(/^[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*(\\[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*)*$/);
+        if (!className.match(/^[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*(\\[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*)*$/)) {
+            return false;
+        }
+        if (className.split('\\').some(elem => reservedWords.includes(elem.toLowerCase()))) {
+            return false;
+        }
+        return true;
     }
 
     exec(command: string, options: cp.ExecOptions): Promise<{ stdout: string; stderr: string }> {
