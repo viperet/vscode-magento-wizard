@@ -15,7 +15,7 @@ export default async function (extensionData: ExtensionInfo, eventName: string, 
         throw new Error(magento.relativePath(observerPhpUri)+' already exists');
     }
 
-    if (!magento.fileExists(eventsXmlUri)) {
+    if (!await magento.fileExists(eventsXmlUri)) {
         // file not found
         let eventsXml = require('../../templates/etc/events.xml')(Object.assign({ eventName, observerName }, extensionData));
         magento.writeFile(eventsXmlUri, eventsXml);
