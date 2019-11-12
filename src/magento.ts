@@ -9,8 +9,9 @@ import * as cp from 'child_process';
 const fs = workspace.fs;
 
 import { TextEncoder, TextDecoder } from 'util';
-import Php, { MethodVisibility, ClassMethod, reservedWords } from './php';
+import Php, { ClassMethod, reservedWords } from './php';
 
+export enum ExtentionKind  { Module, Theme }
 export interface ExtensionInfo {
     /** Workspace folder of the extension */
     workspace: WorkspaceFolder;
@@ -34,6 +35,8 @@ export interface UriData extends ExtensionInfo {
     ext: string;
     /** Magento area (frontend,adminhtml) */
     area: string;
+    /** Extension kind (Module or Theme) */
+    kind: ExtentionKind;
 }
 
 export interface Docblock {
@@ -102,11 +105,14 @@ class Magento {
             throw new Error('File not in the workspace (not saved yet?)');
         }
         this.folder = currentWorkspace;
-        let data: UriData = { workspace: currentWorkspace, vendor: '', extension: '', type: '', namespace: '', name: '', ext: '', extensionFolder: '', extensionUri: currentWorkspace.uri, area: ''};
+        let data: UriData = { workspace: currentWorkspace, vendor: '', extension: '', type: '', namespace: '', name: '', ext: '', extensionFolder: '', extensionUri: currentWorkspace.uri, area: '', kind: ExtentionKind.Module};
         let relativePath = workspace.asRelativePath(uri);
         let path: string[] = [];
-        // Extension in /app/code
-        let matches = relativePath.match(/^(?<rootPath>.*\/)?app\/code\/(?<vendor>\w+)\/(?<extension>\w+)\/(?<path>.*\/)?(?<fileName>\w+)\.(?<ext>\w+)$/);
+        if(uri.fsPath.match(/(\/app\/design\/|\/vendor\/magento\/theme-)/)) {
+            data.kind = ExtentionKind.Theme;
+        }
+        // Extension in /app/code /add/design
+        let matches = relativePath.match(/^(?<rootPath>.*\/)?(?<extFolder>app\/(code|design\/frontend|design\/backend)\/)(?<vendor>\w+)\/(?<extension>\w+)\/(?<path>.*\/)?(?<fileName>\w+)\.(?<ext>\w+)$/);
         if (matches && matches.groups) {
             path = matches.groups.path ? matches.groups.path.split('/').filter(Boolean) : [];
             matches.groups.rootPath = matches.groups.rootPath || '';
@@ -114,7 +120,7 @@ class Magento {
             data.extension = matches.groups.extension;
             data.name = matches.groups.fileName;
             data.ext = matches.groups.ext;
-            data.extensionFolder = `${matches.groups.rootPath}app/code/${data.vendor}/${data.extension}/`;
+            data.extensionFolder = `${matches.groups.rootPath}${matches.groups.extFolder}${data.vendor}/${data.extension}/`;
         } else {
             // Extension in /vendor
             matches = relativePath.match(/^(?<rootPath>.*\/)?vendor\/(?<vendor>[A-Za-z0-9_-]+)\/(?<extension>[A-Za-z0-9_-]+)\/(?<path>.*\/)?(?<fileName>\w+)\.(?<ext>\w+)$/);
@@ -550,32 +556,46 @@ class Magento {
         if (matches) {
             if (matches.groups) {
                 let extensionUri: Uri;
-                if (matches.groups.vendor === data.vendor && matches.groups.extension === data.extension) {
-                    extensionUri = data.extensionUri;
-                } else if(matches.groups.vendor === 'Magento') {
-                    extensionUri = this.appendUri(data.workspace.uri, 'vendor', 'magento', 'module-' + Case.kebab(matches.groups.extension));
-                } else {
-                    return undefined;
-                }
+                if (data.kind = ExtentionKind.Module) {
+                    if (matches.groups.vendor === data.vendor && matches.groups.extension === data.extension) {
+                        extensionUri = data.extensionUri;
+                    } else if(matches.groups.vendor === 'Magento') {
+                        extensionUri = this.appendUri(data.workspace.uri, 'vendor', 'magento', 'module-' + Case.kebab(matches.groups.extension));
+                    } else {
+                        return undefined;
+                    }
 
-                if (data.type === 'view' && data.ext === 'xml') {
-                    // file is XML layout
+                    if (data.type === 'view' && data.ext === 'xml') {
+                        // file is XML layout
+                        let fileType;
+                        if (matches.groups.ext === 'phtml') {
+                            fileType = 'templates';
+                        } else {
+                            fileType = 'web';
+                        }
+                        if (!data.area) {
+                            data.area = 'base';
+                        }
+
+                        let viewFileUri = this.appendUri(extensionUri, 'view', data.area, fileType, matches.groups.path + '.' + matches.groups.ext);
+                        if (await this.fileExists(viewFileUri)) {
+                            return viewFileUri;
+                        }
+                        // if not found - try to look into 'base' folder
+                        viewFileUri = this.appendUri(extensionUri, 'view', 'base', fileType, matches.groups.path + '.' + matches.groups.ext);
+                        if (await this.fileExists(viewFileUri)) {
+                            return viewFileUri;
+                        }
+                    }
+                } else if (data.kind = ExtentionKind.Theme) {
+                    extensionUri = data.extensionUri;
                     let fileType;
                     if (matches.groups.ext === 'phtml') {
                         fileType = 'templates';
                     } else {
                         fileType = 'web';
                     }
-                    if (!data.area) {
-                        data.area = 'base';
-                    }
-
-                    let viewFileUri = this.appendUri(extensionUri, 'view', data.area, fileType, matches.groups.path + '.' + matches.groups.ext);
-                    if (await this.fileExists(viewFileUri)) {
-                        return viewFileUri;
-                    }
-                    // if not found - try to look into 'base' folder
-                    viewFileUri = this.appendUri(extensionUri, 'view', 'base', fileType, matches.groups.path + '.' + matches.groups.ext);
+                    let viewFileUri = this.appendUri(extensionUri,  matches.groups.vendor+'_'+matches.groups.extension, fileType, matches.groups.path + '.' + matches.groups.ext);
                     if (await this.fileExists(viewFileUri)) {
                         return viewFileUri;
                     }

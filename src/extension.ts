@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import createQuickPickCustom, { QuickPickCustomOptons } from './quickPickCustom';
-import magento, { ExtensionInfo }  from './magento';
+import magento, { ExtensionInfo, ExtentionKind }  from './magento';
 import createExtension from './actions/createExtension';
 import injectDependency from './actions/injectDependency';
 import addObserver from './actions/addObserver';

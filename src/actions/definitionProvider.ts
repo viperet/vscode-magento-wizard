@@ -1,7 +1,7 @@
 import magento, { ExtensionInfo, UriData } from '../magento';
 import { workspace, DefinitionProvider, TextDocument, Position, CancellationToken, ProviderResult, Definition, DefinitionLink, Uri, Range, window} from 'vscode';
 
-interface ClassDefinitionLink extends DefinitionLink {
+export interface ClassDefinitionLink extends DefinitionLink {
     resolved: boolean;
     targetName: string;
     targetType: string;
@@ -92,7 +92,7 @@ class MagentoDefinitionProvider implements DefinitionProvider {
         return definitions;
     }
 
-    private async resolveDefinition(uriData: UriData, definition: ClassDefinitionLink): Promise<DefinitionLink | undefined> {
+    public async resolveDefinition(uriData: UriData, definition: ClassDefinitionLink): Promise<DefinitionLink | undefined> {
         if (!definition.resolved) {
             let uri;
             if (definition.targetType === 'class') {
