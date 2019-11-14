@@ -480,16 +480,16 @@ class Magento {
             }
         } else {
             // use composer autoloader to find file as a last resort
-            return await this.composerFindFile(className);
+            return this.composerFindFile(className);
         }
         for(let i = 2; i < classPath.length-1; ++i) {
             file = this.appendUri(file, classPath[i]);
         }
         file = this.appendUri(file, classPath.pop()+'.php');
-        if (!await this.fileExists(file)) {
-            // if file was not found - use composer autoloader
-            return await this.composerFindFile(className);
-        }
+        // if (!await this.fileExists(file)) {
+        //     // if file was not found - use composer autoloader
+        //     return this.composerFindFile(className);
+        // }
         return file;
     }
 
@@ -556,7 +556,7 @@ class Magento {
         if (matches) {
             if (matches.groups) {
                 let extensionUri: Uri;
-                if (data.kind = ExtentionKind.Module) {
+                if (data.kind === ExtentionKind.Module) {
                     if (matches.groups.vendor === data.vendor && matches.groups.extension === data.extension) {
                         extensionUri = data.extensionUri;
                     } else if(matches.groups.vendor === 'Magento') {
@@ -587,7 +587,7 @@ class Magento {
                             return viewFileUri;
                         }
                     }
-                } else if (data.kind = ExtentionKind.Theme) {
+                } else if (data.kind === ExtentionKind.Theme) {
                     extensionUri = data.extensionUri;
                     let fileType;
                     if (matches.groups.ext === 'phtml') {
@@ -598,9 +598,63 @@ class Magento {
                     let viewFileUri = this.appendUri(extensionUri,  matches.groups.vendor+'_'+matches.groups.extension, fileType, matches.groups.path + '.' + matches.groups.ext);
                     if (await this.fileExists(viewFileUri)) {
                         return viewFileUri;
+                    } else {
+                        let parentViewFileUri;
+                        let parentTheme;
+                        let currentTheme = data;
+                        do {
+                            parentTheme = await this.getParentTheme(currentTheme);
+                            if (!parentTheme) {
+                                break;
+                            }
+                            parentViewFileUri = this.appendUri(parentTheme.extensionUri,  matches.groups.vendor+'_'+matches.groups.extension, fileType, matches.groups.path + '.' + matches.groups.ext);
+                            if (await this.fileExists(parentViewFileUri)) {
+                                break;
+                            } else {
+                                parentViewFileUri = undefined;
+                            }
+                        } while (1);
+                        if (parentViewFileUri) {
+                            // file was found in the parents
+                            return parentViewFileUri;
+                        } else {
+                            // lets find that file in a extension
+                            let extensionData = await this.getUriData(this.appendUri(this.getExtensionFolder(matches.groups.vendor, matches.groups.extension), 'etc/module.xml'));
+                            extensionData.type = 'view';
+                            extensionData.area = 'frontend';
+                            return this.getViewFile(extensionData, viewFile);
+                        }
                     }
                 }
             }
+        }
+        return undefined;
+    }
+
+    async getParentTheme(data: UriData): Promise<UriData | undefined> {
+        let themeXmlUri: Uri = this.appendUri(data.extensionUri, 'theme.xml');
+        if (!await this.fileExists(themeXmlUri)) {
+            return undefined;
+        }
+        let themeXml = await this.readFile(themeXmlUri);
+        try {
+            var xml: any = convert.xml2js(themeXml, {
+                compact: true,
+            });
+            if(xml.theme.parent._text) {
+                const [vendor, theme] = xml.theme.parent._text.split('/');
+                let themeUri;
+                themeUri = this.appendUri(data.workspace.uri, 'app/design/frontend', vendor, theme, 'theme.xml');
+                if (await this.fileExists(themeUri)) {
+                    return this.getUriData(themeUri);
+                }
+                themeUri = this.appendUri(data.workspace.uri, 'vendor', vendor, 'theme-'+Case.kebab(theme), 'theme.xml');
+                if (await this.fileExists(themeUri)) {
+                    return this.getUriData(themeUri);
+                }
+            }
+        } catch (e) {
+            return undefined;
         }
         return undefined;
     }

@@ -191,6 +191,13 @@ const classList: {[eventName: string]: EventDescription } = {
             "result": "\\Magento\\Framework\\DataObject"
         }
     },
+    "checkout_cart_product_add_after": {
+        "description": "Dispatched after product was added to the cart",
+        "data": {
+            "quote_item": "\\Magento\\Quote\\Model\\Quote\\Item",
+            "product": "\\Magento\\Catalog\\Model\\Product",
+        }
+    },
     "checkout_onepage_controller_success_action": {
         "description": "",
         "data": {

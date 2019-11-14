@@ -8,28 +8,39 @@ export interface ClassDefinitionLink extends DefinitionLink {
     originSelectionRange: Range;
 }
 
+interface FileCache {
+    version: number;
+    data: { [line: number]: ClassDefinitionLink[] };
+}
+
 class MagentoDefinitionProvider implements DefinitionProvider {
     private fileReferenceRe = /['">]([a-zA-Z0-9]+_[a-zA-Z0-9]+::[-a-zA-Z0-9@$=%#_/.]+)[<'"]/g;
     private classReferenceRe = /['">]([a-zA-Z0-9\\]+)[<:'"]/g;
-    private definitionCache: { [line: number]: ClassDefinitionLink[] } = {};
-    private documentVersion: number = 0;
+    private definitionCache: { [fileName: string]: FileCache} = {};
 
     constructor() {
 
     }
 
     async provideDefinition(document: TextDocument, position: Position, token: CancellationToken): Promise<Definition | DefinitionLink[]> {
-        if (this.documentVersion !== document.version) {
+        let fileCache = this.definitionCache[document.fileName];
+        if (!fileCache) {
+            fileCache = this.definitionCache[document.fileName] = {
+                version: 0,
+                data: {},
+            };
+        }
+        if (fileCache.version !== document.version) {
             // clear cache if doc is changed
-            this.definitionCache = {};
-            this.documentVersion = document.version;
+            fileCache.data = {};
+            fileCache.version = document.version;
         }
         let targetDefinitions: DefinitionLink[] = [];
         const info = await magento.getUriData(document.uri);
 
         if (this.definitionCache[position.line]) {
             // we have data in cache for this line
-            for(let definition of this.definitionCache[position.line]) {
+            for(let definition of fileCache.data[position.line]) {
                 if (definition.originSelectionRange.contains(position)) {
                     const resolvedDefinition = await this.resolveDefinition(info, definition);
                     if (resolvedDefinition) {
@@ -65,6 +76,7 @@ class MagentoDefinitionProvider implements DefinitionProvider {
     private findDefinitions(document: TextDocument, position: Position, lineRange: Range, line: string, re: RegExp, type: string): ClassDefinitionLink[] {
         let definitions: ClassDefinitionLink[] = [];
         let match;
+        // tslint:disable-next-line: no-conditional-assignment
         while (match = re.exec(line)) {
             const sourceRange = lineRange.with(
                 lineRange.start.with(undefined, match.index+1),
@@ -80,10 +92,10 @@ class MagentoDefinitionProvider implements DefinitionProvider {
             };
             definitions.push(definition);
             // save definition to cache
-            if (!this.definitionCache[position.line]) {
-                this.definitionCache[position.line] = [];
+            if (!this.definitionCache[document.fileName].data[position.line]) {
+                this.definitionCache[document.fileName].data[position.line] = [];
             }
-            this.definitionCache[position.line].push(definition);
+            this.definitionCache[document.fileName].data[position.line].push(definition);
 
         }
         // reset regexp object
