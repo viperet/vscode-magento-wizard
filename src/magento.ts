@@ -600,10 +600,9 @@ class Magento {
                         return viewFileUri;
                     } else {
                         let parentViewFileUri;
-                        let parentTheme;
-                        let currentTheme = data;
+                        let parentTheme: UriData | undefined = data;
                         do {
-                            parentTheme = await this.getParentTheme(currentTheme);
+                            parentTheme = await this.getParentTheme(parentTheme);
                             if (!parentTheme) {
                                 break;
                             }
@@ -648,7 +647,7 @@ class Magento {
                 if (await this.fileExists(themeUri)) {
                     return this.getUriData(themeUri);
                 }
-                themeUri = this.appendUri(data.workspace.uri, 'vendor', vendor, 'theme-'+Case.kebab(theme), 'theme.xml');
+                themeUri = this.appendUri(data.workspace.uri, 'vendor', Case.kebab(vendor), 'theme-frontend-'+Case.kebab(theme), 'theme.xml');
                 if (await this.fileExists(themeUri)) {
                     return this.getUriData(themeUri);
                 }

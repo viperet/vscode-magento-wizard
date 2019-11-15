@@ -15,7 +15,7 @@ interface FileCache {
 
 class MagentoDefinitionProvider implements DefinitionProvider {
     private fileReferenceRe = /['">]([a-zA-Z0-9]+_[a-zA-Z0-9]+::[-a-zA-Z0-9@$=%#_/.]+)[<'"]/g;
-    private classReferenceRe = /['">]([a-zA-Z0-9\\]+)[<:'"]/g;
+    private classReferenceRe = /['">](\\?[a-zA-Z0-9]+\\[a-zA-Z0-9\\]+)[<:'"]/g;
     private definitionCache: { [fileName: string]: FileCache} = {};
 
     constructor() {
@@ -38,13 +38,17 @@ class MagentoDefinitionProvider implements DefinitionProvider {
         let targetDefinitions: DefinitionLink[] = [];
         const info = await magento.getUriData(document.uri);
 
-        if (this.definitionCache[position.line]) {
+        if (fileCache.data[position.line]) {
             // we have data in cache for this line
             for(let definition of fileCache.data[position.line]) {
                 if (definition.originSelectionRange.contains(position)) {
-                    const resolvedDefinition = await this.resolveDefinition(info, definition);
-                    if (resolvedDefinition) {
-                        targetDefinitions.push(resolvedDefinition);
+                    if (definition.resolved) {
+                        targetDefinitions.push(definition);
+                    } else {
+                        const resolvedDefinition = await this.resolveDefinition(info, definition);
+                        if (resolvedDefinition) {
+                            targetDefinitions.push(resolvedDefinition);
+                        }
                     }
                     break;
                 }

@@ -251,7 +251,10 @@ export function activate(context: vscode.ExtensionContext) {
         }
     }
 
-    context.subscriptions.push(vscode.languages.registerDefinitionProvider('xml', definitionProvider));
+    context.subscriptions.push(vscode.languages.registerDefinitionProvider([
+        {language: 'xml', scheme: 'file'},
+        {language: 'xml', scheme: 'untitled'},
+    ], definitionProvider));
 }
 
 // this method is called when your extension is deactivated
