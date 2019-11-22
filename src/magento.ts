@@ -130,25 +130,28 @@ class Magento {
                 data.name = matches.groups.fileName;
                 data.ext = matches.groups.ext;
                 data.extensionFolder = `${matches.groups.rootPath}vendor/${matches.groups.vendor}/${matches.groups.extension}/`;
-                let moduleXmlUri = this.appendUri(currentWorkspace.uri, data.extensionFolder, 'etc', 'module.xml');
-                let name = this.uriDataCache.get(data.extensionFolder) as string[];
-                try {
-                    if (name === undefined) {
-                        // handle cache miss - parse etc/module.xml
-                        const moduleXml = await this.readFile(moduleXmlUri);
-                        var xml = convert.xml2js(moduleXml, {
-                            compact: true,
-                            ignoreComment: true,
-                        }) as any;
-                        name = xml.config.module._attributes.name.split('_');
-                        // store extension data in cache
-                        this.uriDataCache.set(data.extensionFolder, name);
+                if (matches.groups.extension.startsWith('theme-')) {
+                } else {
+                    let moduleXmlUri = this.appendUri(currentWorkspace.uri, data.extensionFolder, 'etc', 'module.xml');
+                    let name = this.uriDataCache.get(data.extensionFolder) as string[];
+                    try {
+                        if (name === undefined) {
+                            // handle cache miss - parse etc/module.xml
+                            const moduleXml = await this.readFile(moduleXmlUri);
+                            var xml = convert.xml2js(moduleXml, {
+                                compact: true,
+                                ignoreComment: true,
+                            }) as any;
+                            name = xml.config.module._attributes.name.split('_');
+                            // store extension data in cache
+                            this.uriDataCache.set(data.extensionFolder, name);
+                        }
+                        data.vendor = name[0];
+                        data.extension = name[1];
+                    } catch (e) {
+                        console.log(e);
+                        //throw new Error('Error parsing '+this.relativePath(moduleXmlUri));
                     }
-                    data.vendor = name[0];
-                    data.extension = name[1];
-                } catch (e) {
-                    console.log(e);
-                    //throw new Error('Error parsing '+this.relativePath(moduleXmlUri));
                 }
             }
         }

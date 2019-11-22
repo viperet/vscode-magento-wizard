@@ -10,3 +10,5 @@ src/**
 **/tslint.json
 **/*.map
 **/*.ts
+templates/
+helpers/

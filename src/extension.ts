@@ -9,6 +9,7 @@ import generateCatalog from './actions/generateCatalog';
 import Php, { ClassMethod, MethodVisibility } from './php';
 import { MagentoTaskProvider } from './actions/MagentoTaskProvider';
 import { definitionProvider } from './actions/definitionProvider';
+import Indexer from './indexer';
 
 async function getVendorExtension(options?: QuickPickCustomOptons): Promise<ExtensionInfo | undefined> {
     if (!options) {
@@ -255,6 +256,8 @@ export function activate(context: vscode.ExtensionContext) {
         {language: 'xml', scheme: 'file'},
         {language: 'xml', scheme: 'untitled'},
     ], definitionProvider));
+
+    const indexer = new Indexer(context, vscode.workspace.workspaceFolders![0]);
 }
 
 // this method is called when your extension is deactivated
