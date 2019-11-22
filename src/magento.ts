@@ -11,7 +11,7 @@ const fs = workspace.fs;
 import { TextEncoder, TextDecoder } from 'util';
 import Php, { ClassMethod, reservedWords } from './php';
 
-export enum ExtentionKind  { Module, Theme }
+export enum ExtentionKind  { Module, Theme, Library, Setup, Language }
 export interface ExtensionInfo {
     /** Workspace folder of the extension */
     workspace: WorkspaceFolder;
