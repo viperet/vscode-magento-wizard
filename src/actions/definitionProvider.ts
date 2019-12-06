@@ -37,6 +37,9 @@ class MagentoDefinitionProvider implements DefinitionProvider {
         }
         let targetDefinitions: DefinitionLink[] = [];
         const info = await magento.getUriData(document.uri);
+        if (!info) {
+            throw new Error('Not a Magento 2 extension file');
+        }
 
         if (fileCache.data[position.line]) {
             // we have data in cache for this line

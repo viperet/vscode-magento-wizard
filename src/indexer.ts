@@ -1,17 +1,15 @@
-import { Uri, workspace, WorkspaceFolder, RelativePattern, ExtensionContext, WorkspaceConfiguration } from 'vscode';
+import { Uri, workspace, WorkspaceFolder, RelativePattern, ExtensionContext, WorkspaceConfiguration, window } from 'vscode';
 import * as path  from 'path';
 import magento, { UriData, ExtentionKind } from './magento';
-
-interface ComponentsRegistrations {
-    [componentName: string]: UriData;
-}
+import * as convert  from 'xml-js';
+import * as PProgress from 'p-progress';
 
 interface RegistrationData {
-    module: ComponentsRegistrations;
-    library: ComponentsRegistrations;
-    language: ComponentsRegistrations;
-    theme: ComponentsRegistrations;
-    setup: ComponentsRegistrations;
+    module: UriData[];
+    library: UriData[];
+    language: UriData[];
+    theme: UriData[];
+    setup: UriData[];
 }
 
 export default class Indexer {
@@ -19,11 +17,11 @@ export default class Indexer {
     private context: ExtensionContext;
     private php: string = 'php';
     private paths: RegistrationData = {
-        module: {},
-        library: {},
-        language: {},
-        theme: {},
-        setup: {},
+        module: [],
+        library: [],
+        language: [],
+        theme: [],
+        setup: [],
     };
 
     constructor(context: ExtensionContext, workspaceFolder: WorkspaceFolder) {
@@ -39,38 +37,38 @@ export default class Indexer {
     }
 
     async index(): Promise<void> {
-        const files = await workspace.findFiles(new RelativePattern(this.workspaceFolder, 'app/**/registration.php'));
-        files.forEach(file => {
-            this.register(file);
-        });
+        const statusText = 'MagentoWizard indexing extensions/themes ';
+        const status = window.createStatusBarItem();
+        status.text = statusText;
+        status.show();
+        const files = await workspace.findFiles(new RelativePattern(this.workspaceFolder, '**/{app,vendor}/**/registration.php'), '**/tests/**');
+        const registrations =  PProgress.all(files.map(file => this.register.bind(this, file)), { concurrency: 5});
+        registrations.onProgress(progress => status.text = statusText+Math.round(progress*100)+'%');
+        await registrations;
+        window.showErrorMessage(`Modules count: ${this.paths.module.length}`);
+        status.dispose();
         return;
     }
 
-    async register(file: Uri): Promise <string[]> {
+    async register(file: Uri): Promise<undefined> {
         const commandLine =  this.php + ' ' + path.join(this.context.extensionPath,'php', 'ComponentRegistrar.php') + ' ' + file.fsPath;
-        let { stdout, stderr } = await magento.exec(commandLine, {});
         try {
+            let { stdout, stderr } = await magento.exec(commandLine, {});
             const paths = JSON.parse(stdout);
             if (paths) {
-                Object.assign(this.paths.language, paths.language);
-                Object.assign(this.paths.library, paths.library);
-                this.indexModule(paths.module).then(modules => {
-                    Object.assign(this.paths.module, modules);
-                });
-                Object.assign(this.paths.setup, paths.setup);
-                Object.assign(this.paths.theme, paths.theme);
+                this.paths.module.push(...await this.indexModule(paths.module));
+                this.paths.theme.push(...await this.indexTheme(paths.theme));
             }
-        } catch {
-
+        } catch(e) {
+            console.log(e);
         }
-
-        return [];
+        return;
     }
 
-    async indexModule(registrations: {[componentName: string]: string}): Promise<ComponentsRegistrations> {
-        let components: ComponentsRegistrations = {};
+    async indexModule(registrations: {[componentName: string]: string}): Promise<UriData[]> {
+        let components: UriData[] = [];
         for(let componentName in registrations) {
-            const extensionUri = Uri.parse(registrations[componentName]);
+            let extensionUri = Uri.file(registrations[componentName]);
             let extensionNamespace = componentName.split('_').join('\\')+'\\';
             try {
                 const composerJson = JSON.parse(await magento.readFile(magento.appendUri(extensionUri, 'composer.json')));
@@ -80,25 +78,80 @@ export default class Indexer {
                         break;
                     }
                 }
-            } catch {
+            } catch(e) {
+                console.log(e);
             }
             const [vendor, extension] = extensionNamespace.split('\\');
 
-            components[componentName] = {
+            // let classes: string[] = [];
+            // const files = await workspace.findFiles(new RelativePattern(registrations[componentName], '**/*.php'), 'registration.php');
+            // files.forEach(file => {
+            //     let className =  extensionNamespace+path.relative(registrations[componentName], path.dirname(file.fsPath)).split(path.sep).join('\\')+'\\'+path.basename(file.fsPath, '.php');
+            //     classes.push(className);
+            // });
+
+            components.push({
                 kind: ExtentionKind.Module,
-                extensionFolder: registrations[componentName],
+                extensionFolder: path.dirname(registrations[componentName]),
                 extensionUri,
-                name: componentName,
+                componentName,
                 workspace: workspace.getWorkspaceFolder(extensionUri)!,
                 namespace: extensionNamespace,
                 vendor,
                 extension,
+                parent: '',
+                name: '',
                 area: '',
                 type: '',
                 ext: '',
 
-            };
+            });
         }
         return components;
+    }
+
+
+    async indexTheme(registrations: {[componentName: string]: string}): Promise<UriData[]> {
+        let components: UriData[] = [];
+        for(let componentName in registrations) {
+            const extensionUri = Uri.parse(registrations[componentName]);
+            const [area, vendor, extension] = componentName.split('/');
+            let parentTheme = '';
+            try {
+                const themeXml = await magento.readFile(magento.appendUri(extensionUri, 'theme.xml'));
+                var xml = convert.xml2js(themeXml, { compact: true }) as any;
+                parentTheme = area+'/'+xml.theme.parent._text;
+            } catch {
+            }
+
+            components.push({
+                kind: ExtentionKind.Theme,
+                extensionFolder: registrations[componentName],
+                extensionUri,
+                componentName,
+                workspace: workspace.getWorkspaceFolder(extensionUri)!,
+                parent: parentTheme,
+                namespace: '',
+                area,
+                vendor,
+                extension,
+                name: '',
+                type: '',
+                ext: '',
+            });
+        }
+        return components;
+    }
+
+    findByUri(path: Uri): UriData | undefined {
+        for(let extensions of [this.paths.module, this.paths.theme]) {
+            for(let extension of extensions) {
+                if (path.fsPath.startsWith(extension.extensionFolder)) {
+                    return extension;
+                }
+            }
+        }
+
+        return undefined;
     }
 }

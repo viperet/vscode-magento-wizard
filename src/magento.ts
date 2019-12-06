@@ -10,6 +10,7 @@ const fs = workspace.fs;
 
 import { TextEncoder, TextDecoder } from 'util';
 import Php, { ClassMethod, reservedWords } from './php';
+import Indexer from './indexer';
 
 export enum ExtentionKind  { Module, Theme, Library, Setup, Language }
 export interface ExtensionInfo {
@@ -23,6 +24,8 @@ export interface ExtensionInfo {
     extensionFolder: string;
     /** Extenstion folder Uri */
     extensionUri: Uri;
+    /** Component name (ex: Magento_Catalog) */
+    componentName: string;
 }
 export interface UriData extends ExtensionInfo {
     /** File type (model, controller, block, etc) */
@@ -37,6 +40,8 @@ export interface UriData extends ExtensionInfo {
     area: string;
     /** Extension kind (Module or Theme) */
     kind: ExtentionKind;
+    /** Parent theme */
+    parent: string;
 }
 
 export interface Docblock {
@@ -50,6 +55,8 @@ class Magento {
 
     private uriDataCache: NodeCache;
     private composerCache: NodeCache;
+
+    public indexer: { [folder: string]: Indexer } = {};
 
     // @ts-ignore
     folder: WorkspaceFolder;
@@ -99,13 +106,21 @@ class Magento {
      *
      * @param uri Uri of the file of Magento 2 extension
      */
-    async getUriData(uri: Uri): Promise<UriData> {
+    async getUriData(uri: Uri): Promise<UriData | undefined> {
         let currentWorkspace = workspace.getWorkspaceFolder(uri);
         if (!currentWorkspace) {
             throw new Error('File not in the workspace (not saved yet?)');
         }
         this.folder = currentWorkspace;
-        let data: UriData = { workspace: currentWorkspace, vendor: '', extension: '', type: '', namespace: '', name: '', ext: '', extensionFolder: '', extensionUri: currentWorkspace.uri, area: '', kind: ExtentionKind.Module};
+        let data: UriData | undefined;
+        if (this.indexer[currentWorkspace.uri.fsPath]) {
+            data = this.indexer[currentWorkspace.uri.fsPath].findByUri(uri);
+            if (!data) {
+                return;
+            }
+        } else {
+            return;
+        }
         let relativePath = workspace.asRelativePath(uri);
         let path: string[] = [];
         if(uri.fsPath.match(/(\/app\/design\/|\/vendor\/magento\/theme-)/)) {
@@ -226,7 +241,7 @@ class Magento {
             // getUriData may fail for files not in the worspace folders, no need to continue
             return;
         }
-        if (!data.vendor || !data.extension) {
+        if (!data || !data.vendor || !data.extension) {
             // File is not in the Magento 2 extension
             return;
         }
@@ -317,7 +332,7 @@ class Magento {
         let extClasses: string[]  = [];
         for(let uri of files) {
             let data = await this.getUriData(uri);
-            if (data.vendor && data.extension && data.namespace && data.name) {
+            if (data && data.vendor && data.extension && data.namespace && data.name) {
                 extClasses.push(`\\${data.namespace}\\${data.name}`);
             }
         }
@@ -526,6 +541,9 @@ class Magento {
     async getClassMethods(classFile: Uri): Promise<ClassMethod[]> {
         let php = new Php();
         const data = await this.getUriData(classFile);
+        if (!data) {
+            return [];
+        }
         php.parseCode(await this.readFile(classFile), data.name+'.php');
         const methods = await php.getMethods(data.name);
         return methods;
@@ -622,9 +640,11 @@ class Magento {
                         } else {
                             // lets find that file in a extension
                             let extensionData = await this.getUriData(this.appendUri(this.getExtensionFolder(matches.groups.vendor, matches.groups.extension), 'etc/module.xml'));
-                            extensionData.type = 'view';
-                            extensionData.area = 'frontend';
-                            return this.getViewFile(extensionData, viewFile);
+                            if (extensionData) {
+                                extensionData.type = 'view';
+                                extensionData.area = 'frontend';
+                                return this.getViewFile(extensionData, viewFile);
+                            }
                         }
                     }
                 }

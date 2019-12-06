@@ -49,6 +49,7 @@ async function getVendorExtension(options?: QuickPickCustomOptons): Promise<Exte
                 vendor,
                 extension,
                 extensionFolder,
+                componentName: vendor+'_'+extension,
                 extensionUri: magento.appendUri(currentWorkspace.uri, extensionFolder),
             };
         }
@@ -58,6 +59,13 @@ async function getVendorExtension(options?: QuickPickCustomOptons): Promise<Exte
 }
 
 export function activate(context: vscode.ExtensionContext) {
+    if (vscode.workspace.workspaceFolders) {
+        for(let workspaceFolder of vscode.workspace.workspaceFolders) {
+            context.subscriptions.push(vscode.tasks.registerTaskProvider(MagentoTaskProvider.MagentoScriptType, new MagentoTaskProvider(workspaceFolder)));
+            magento.indexer[workspaceFolder.uri.fsPath] = new Indexer(context, workspaceFolder);
+        }
+    }
+
     context.subscriptions.push(vscode.commands.registerCommand('magentowizard.newExtension', async () => {
         const data = await getVendorExtension({ custom: true });
         if (!data) {
@@ -77,7 +85,7 @@ export function activate(context: vscode.ExtensionContext) {
                 throw new Error('Only supported for PHP files');
             }
             let data = await magento.getUriData(textEditor.document.uri);
-            if (!data.vendor || !data.extension) {
+            if (!data || !data.vendor || !data.extension) {
                 throw new Error('Not a Magento 2 extension file');
             }
             let folder = vscode.workspace.getWorkspaceFolder(textEditor.document.uri);
@@ -246,18 +254,12 @@ export function activate(context: vscode.ExtensionContext) {
             console.error(e);
         }
     }));
-    if (vscode.workspace.workspaceFolders) {
-        for(let workspaceFolder of vscode.workspace.workspaceFolders) {
-            context.subscriptions.push(vscode.tasks.registerTaskProvider(MagentoTaskProvider.MagentoScriptType, new MagentoTaskProvider(workspaceFolder)));
-        }
-    }
 
     context.subscriptions.push(vscode.languages.registerDefinitionProvider([
         {language: 'xml', scheme: 'file'},
         {language: 'xml', scheme: 'untitled'},
     ], definitionProvider));
 
-    const indexer = new Indexer(context, vscode.workspace.workspaceFolders![0]);
 }
 
 // this method is called when your extension is deactivated
