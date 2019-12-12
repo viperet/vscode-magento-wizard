@@ -1,5 +1,5 @@
 import { workspace, Uri, FileType, TextEditor, Position, Range, WorkspaceFolder, window, QuickPickItem, SnippetString, RelativePattern, FileStat } from 'vscode';
-import { posix } from 'path';
+import * as path  from 'path';
 import classList from './classlist';
 import eventsList from './eventsList';
 import * as Case from 'case';
@@ -70,6 +70,10 @@ class Magento {
         this.composerCache = new NodeCache({ useClones: false, stdTTL: 60, checkperiod: 60 });
     }
 
+    getIndexer(): Indexer {
+        return this.indexer[this.folder.uri.fsPath];
+    }
+
     /**
      * Appends path components to the end of the Uri
      *
@@ -79,18 +83,47 @@ class Magento {
      * @memberof Magento
      */
     appendUri(uri: Uri, ...args: string[]): Uri {
-        return uri.with({ path: posix.join(uri.path, ...args) });
+        return uri.with({ path: path.join(uri.path, ...args) });
     }
 
     /**
      * Returns Uri of the Magento 2 /app/code folder
      *
-     * @param {WorkspaceFolder} folder workspace folder to use
      * @returns {Uri}
      * @memberof Magento
      */
-    getAppCodeUri(): Uri {
-        let uri = this.appendUri(this.folder.uri, 'app', 'code');
+    async getAppCodeUri(): Promise<Uri> {
+        if (!this.indexer[this.folder.uri.fsPath]) {
+            throw new Error('No Magento in this workspace folder');
+        }
+        let magentoRoot = await this.indexer[this.folder.uri.fsPath].magentoRoot;
+        if (!magentoRoot) {
+            throw new Error('No Magento in this workspace folder');
+        }
+        let uri = this.appendUri(magentoRoot, 'app', 'code');
+        try {
+            fs.stat(uri);
+            return uri;
+        } catch {
+            throw new Error('There is no Magento folders in this workspace folder');
+        }
+    }
+
+    /**
+     * Returns Uri of the Magento 2 /app/design folder
+     *
+     * @returns {Uri}
+     * @memberof Magento
+     */
+    async getAppDesignUri(): Promise<Uri> {
+        if (!this.indexer[this.folder.uri.fsPath]) {
+            throw new Error('No Magento in this workspace folder');
+        }
+        let magentoRoot = await this.indexer[this.folder.uri.fsPath].magentoRoot;
+        if (!magentoRoot) {
+            throw new Error('No Magento in this workspace folder');
+        }
+        let uri = this.appendUri(magentoRoot, 'app', 'design');
         try {
             fs.stat(uri);
             return uri;
@@ -121,64 +154,9 @@ class Magento {
         } else {
             return;
         }
-        let relativePath = workspace.asRelativePath(uri);
-        let path: string[] = [];
-        if(uri.fsPath.match(/(\/app\/design\/|\/vendor\/magento\/theme-)/)) {
-            data.kind = ExtentionKind.Theme;
-        }
-        // Extension in /app/code /add/design
-        let matches = relativePath.match(/^(?<rootPath>.*\/)?(?<extFolder>app\/(code|design\/frontend|design\/backend)\/)(?<vendor>\w+)\/(?<extension>\w+)\/(?<path>.*\/)?(?<fileName>\w+)\.(?<ext>\w+)$/);
-        if (matches && matches.groups) {
-            path = matches.groups.path ? matches.groups.path.split('/').filter(Boolean) : [];
-            matches.groups.rootPath = matches.groups.rootPath || '';
-            data.vendor = matches.groups.vendor;
-            data.extension = matches.groups.extension;
-            data.name = matches.groups.fileName;
-            data.ext = matches.groups.ext;
-            data.extensionFolder = `${matches.groups.rootPath}${matches.groups.extFolder}${data.vendor}/${data.extension}/`;
-        } else {
-            // Extension in /vendor
-            matches = relativePath.match(/^(?<rootPath>.*\/)?vendor\/(?<vendor>[A-Za-z0-9_-]+)\/(?<extension>[A-Za-z0-9_-]+)\/(?<path>.*\/)?(?<fileName>\w+)\.(?<ext>\w+)$/);
-            if (matches && matches.groups) {
-                path = matches.groups.path ? matches.groups.path.split('/').filter(Boolean) : [];
-                matches.groups.rootPath = matches.groups.rootPath || '';
-                data.name = matches.groups.fileName;
-                data.ext = matches.groups.ext;
-                data.extensionFolder = `${matches.groups.rootPath}vendor/${matches.groups.vendor}/${matches.groups.extension}/`;
-                if (matches.groups.extension.startsWith('theme-')) {
-                } else {
-                    let moduleXmlUri = this.appendUri(currentWorkspace.uri, data.extensionFolder, 'etc', 'module.xml');
-                    let name = this.uriDataCache.get(data.extensionFolder) as string[];
-                    try {
-                        if (name === undefined) {
-                            // handle cache miss - parse etc/module.xml
-                            const moduleXml = await this.readFile(moduleXmlUri);
-                            var xml = convert.xml2js(moduleXml, {
-                                compact: true,
-                                ignoreComment: true,
-                            }) as any;
-                            name = xml.config.module._attributes.name.split('_');
-                            // store extension data in cache
-                            this.uriDataCache.set(data.extensionFolder, name);
-                        }
-                        data.vendor = name[0];
-                        data.extension = name[1];
-                    } catch (e) {
-                        console.log(e);
-                        //throw new Error('Error parsing '+this.relativePath(moduleXmlUri));
-                    }
-                }
-            }
-        }
-        data.namespace = data.vendor+'\\'+data.extension;
-        if (path && path.length > 0) {
-            data.type = path[0].toLowerCase();
-            data.namespace = [data.vendor, data.extension, ...path].join('\\');
-            if (['base','frontend','adminhtml'].includes(path[1])) {
-                data.area = path[1];
-            }
-        }
-        data.extensionUri = this.appendUri(currentWorkspace.uri, data.extensionFolder);
+        data.namespace += path.dirname(uri.fsPath).slice(data.extensionFolder.length).split(path.sep).join('\\');
+        data.ext = path.extname(uri.fsPath).slice(1);
+        data.name = path.basename(uri.fsPath, path.extname(uri.fsPath));
         return data;
     }
 
@@ -189,16 +167,12 @@ class Magento {
      * @memberof Magento
      */
     async getVendors(): Promise<string[]> {
-        const codeUri = this.getAppCodeUri();
-        var dir:[string, FileType][] = [];
-        try {
-             dir = await fs.readDirectory(codeUri);
-        } catch {
+        let vendors = [];
+        for(let module of this.indexer[this.folder.uri.fsPath].paths.module) {
+            vendors.push(module.vendor);
         }
-
-        return dir
-            .filter(entry => { return entry[1] === FileType.Directory; })
-            .map(entry => { return entry[0]; });
+        // return unique vendors
+        return [...new Set(vendors)].sort();
     }
 
     /**
@@ -209,16 +183,14 @@ class Magento {
      * @memberof Magento
      */
     async getExtensions(vendor: string): Promise<string[]> {
-        const vendorUri = this.appendUri(this.getAppCodeUri(), vendor);
-        var dir:[string, FileType][] = [];
-        try {
-             dir = await fs.readDirectory(vendorUri);
-        } catch {
-        }
 
-        return dir
-            .filter(entry => { return entry[1] === FileType.Directory; })
-            .map(entry => { return entry[0]; });
+        let extensions = [];
+        for(let module of this.indexer[this.folder.uri.fsPath].paths.module) {
+            if (module.vendor === vendor) {
+                extensions.push(module.extension);
+            }
+        }
+        return extensions;
     }
 
     /**
@@ -317,12 +289,12 @@ class Magento {
         return this.searchClasses(data.extensionFolder);
 
         // search for classes in /app/code
-        //return this.searchClasses('app/code/');
+        // return this.searchClasses(this.getAppCodeUri().fsPath);
    }
 
     async searchClasses(path: string): Promise<string[]> {
         let pattern = new RelativePattern(
-                this.appendUri(this.folder.uri, path).fsPath,
+                path,
                 '**/*.php'
             );
         let files = await workspace.findFiles(
@@ -463,16 +435,18 @@ class Magento {
         return workspace.asRelativePath(uri);
     }
 
-    getExtensionFolder(vendor: string, extension: string): Uri {
-        if (vendor === 'Magento') {
-            if (extension === 'Framework') {
-                return this.appendUri(this.folder.uri, 'vendor/magento/framework');
-            } else {
-                return this.appendUri(this.folder.uri, 'vendor/magento/module-'+Case.kebab(extension));
+    getExtensionFolder(vendor: string, extension: string): Uri | undefined {
+        for(let module of this.getIndexer().paths.module) {
+            if (module.vendor === vendor && module.extension === extension) {
+                return module.extensionUri;
             }
-        } else {
-            return this.appendUri(this.folder.uri, 'app/code', vendor, extension);
         }
+        for(let module of this.getIndexer().paths.theme) {
+            if (module.vendor === vendor && module.extension === extension) {
+                return module.extensionUri;
+            }
+        }
+        return undefined;
     }
 
     /**
@@ -485,43 +459,53 @@ class Magento {
      * @memberof Magento
      */
     async getClassFile(extension: ExtensionInfo, className: string): Promise<Uri | undefined> {
-        const classPath = className.split('\\').filter(Boolean);
-        let file: Uri;
-        if (extension.vendor === classPath[0] && extension.extension === classPath[1]) {
-            // class from current extension
-            file = extension.extensionUri;
-        } else if (classPath[0] === 'Magento') {
-            if (classPath[1] === 'Framework') {
-                file = this.appendUri(extension.workspace.uri, 'vendor/magento/framework');
-            } else {
-                file = this.appendUri(extension.workspace.uri, 'vendor/magento/module-'+Case.kebab(classPath[1]));
-            }
-        } else {
-            // use composer autoloader to find file as a last resort
-            return this.composerFindFile(className);
+        let module = this.indexer[this.folder.uri.fsPath].findByClassName(className);
+        if (module) {
+            return this.appendUri(module.extensionUri, className.slice(module.namespace.length).replace(/\\/g, path.sep)+'.php');
         }
-        for(let i = 2; i < classPath.length-1; ++i) {
-            file = this.appendUri(file, classPath[i]);
-        }
-        file = this.appendUri(file, classPath.pop()+'.php');
-        // if (!await this.fileExists(file)) {
-        //     // if file was not found - use composer autoloader
+        // use composer autoloader to find file as a last resort
+        return this.composerFindFile(className);
+
+        // let file: Uri;
+        // const classPath = className.split('\\').filter(Boolean);
+        // if (extension.vendor === classPath[0] && extension.extension === classPath[1]) {
+        //     // class from current extension
+        //     file = extension.extensionUri;
+        // } else if (classPath[0] === 'Magento') {
+        //     if (classPath[1] === 'Framework') {
+        //         file = this.appendUri(extension.workspace.uri, 'vendor/magento/framework');
+        //     } else {
+        //         file = this.appendUri(extension.workspace.uri, 'vendor/magento/module-'+Case.kebab(classPath[1]));
+        //     }
+        // } else {
+        //     // use composer autoloader to find file as a last resort
         //     return this.composerFindFile(className);
         // }
-        return file;
+        // for(let i = 2; i < classPath.length-1; ++i) {
+        //     file = this.appendUri(file, classPath[i]);
+        // }
+        // file = this.appendUri(file, classPath.pop()+'.php');
+        // // if (!await this.fileExists(file)) {
+        // //     // if file was not found - use composer autoloader
+        // //     return this.composerFindFile(className);
+        // // }
+        // return file;
     }
 
     async composerFindFile(className: string): Promise<Uri | undefined> {
         try {
             let fileName: Uri | undefined = this.composerCache.get(className);
             if (fileName === undefined) {
+                const magentoRoot = await this.getIndexer().magentoRoot;
+                if (!magentoRoot) {
+                    return undefined;
+                }
                 const _className = className.replace(/^\\?(.*)$/, '$1');
                 const php = workspace.getConfiguration('', this.folder.uri).get('magentoWizard.tasks.php') || 'php';
                 const commandLine = `${php} -r 'echo (include "vendor/autoload.php")->findFile("${_className}");'`;
-                const { stdout, stderr } = await this.exec(commandLine, { cwd: this.folder.uri.fsPath });
-                if (stdout.startsWith(this.appendUri(this.folder.uri,'vendor','composer').fsPath)) {
-                    const relativePath = workspace.asRelativePath(posix.normalize(stdout));
-                    fileName = this.appendUri(this.folder.uri, relativePath);
+                const { stdout, stderr } = await this.exec(commandLine, { cwd: magentoRoot.fsPath });
+                if (stdout.startsWith(this.appendUri(magentoRoot,'vendor').fsPath)) {
+                    fileName = Uri.file(stdout);
                     this.composerCache.set(className, fileName);
                 }
             }
@@ -540,12 +524,9 @@ class Magento {
      */
     async getClassMethods(classFile: Uri): Promise<ClassMethod[]> {
         let php = new Php();
-        const data = await this.getUriData(classFile);
-        if (!data) {
-            return [];
-        }
-        php.parseCode(await this.readFile(classFile), data.name+'.php');
-        const methods = await php.getMethods(data.name);
+        let name = path.basename(classFile.fsPath, '.php');
+        php.parseCode(await this.readFile(classFile), name+'.php');
+        const methods = await php.getMethods(name);
         return methods;
     }
 
@@ -574,77 +555,84 @@ class Magento {
     async getViewFile(data: UriData, viewFile: string): Promise<Uri | undefined> {
         const fileReferenceRe = /^(?<vendor>[a-zA-Z0-9]+)_(?<extension>[a-zA-Z0-9]+)::(?<path>[-a-zA-Z0-9@$=%#_/.]+)\.(?<ext>[-a-zA-Z0-9]+)$/;
         const matches = viewFile.trim().match(fileReferenceRe);
-        if (matches) {
-            if (matches.groups) {
-                let extensionUri: Uri;
-                if (data.kind === ExtentionKind.Module) {
-                    if (matches.groups.vendor === data.vendor && matches.groups.extension === data.extension) {
-                        extensionUri = data.extensionUri;
-                    } else if(matches.groups.vendor === 'Magento') {
-                        extensionUri = this.appendUri(data.workspace.uri, 'vendor', 'magento', 'module-' + Case.kebab(matches.groups.extension));
-                    } else {
-                        return undefined;
-                    }
+        if (matches && matches.groups) {
+            let extensionUri: Uri;
+            let extension;
 
-                    if (data.type === 'view' && data.ext === 'xml') {
-                        // file is XML layout
-                        let fileType;
-                        if (matches.groups.ext === 'phtml') {
-                            fileType = 'templates';
-                        } else {
-                            fileType = 'web';
-                        }
-                        if (!data.area) {
-                            data.area = 'base';
-                        }
-
-                        let viewFileUri = this.appendUri(extensionUri, 'view', data.area, fileType, matches.groups.path + '.' + matches.groups.ext);
-                        if (await this.fileExists(viewFileUri)) {
-                            return viewFileUri;
-                        }
-                        // if not found - try to look into 'base' folder
-                        viewFileUri = this.appendUri(extensionUri, 'view', 'base', fileType, matches.groups.path + '.' + matches.groups.ext);
-                        if (await this.fileExists(viewFileUri)) {
-                            return viewFileUri;
-                        }
+            if (data.kind === ExtentionKind.Module) {
+                // search for view file in the module
+                for(let module of this.indexer[this.folder.uri.fsPath].paths.module) {
+                    if (module.vendor === matches.groups.vendor && module.extension === matches.groups.extension) {
+                        extension =  module;
                     }
-                } else if (data.kind === ExtentionKind.Theme) {
-                    extensionUri = data.extensionUri;
+                }
+                if (!extension) {
+                    return undefined;
+                }
+
+
+                if (data.type === 'view' && data.ext === 'xml') {
+                    // file is XML layout
                     let fileType;
                     if (matches.groups.ext === 'phtml') {
                         fileType = 'templates';
                     } else {
                         fileType = 'web';
                     }
-                    let viewFileUri = this.appendUri(extensionUri,  matches.groups.vendor+'_'+matches.groups.extension, fileType, matches.groups.path + '.' + matches.groups.ext);
+                    if (!data.area) {
+                        data.area = 'base';
+                    }
+
+                    let viewFileUri = this.appendUri(extension.extensionUri, 'view', data.area, fileType, matches.groups.path + '.' + matches.groups.ext);
                     if (await this.fileExists(viewFileUri)) {
                         return viewFileUri;
-                    } else {
-                        let parentViewFileUri;
-                        let parentTheme: UriData | undefined = data;
-                        do {
-                            parentTheme = await this.getParentTheme(parentTheme);
-                            if (!parentTheme) {
-                                break;
-                            }
-                            parentViewFileUri = this.appendUri(parentTheme.extensionUri,  matches.groups.vendor+'_'+matches.groups.extension, fileType, matches.groups.path + '.' + matches.groups.ext);
-                            if (await this.fileExists(parentViewFileUri)) {
-                                break;
-                            } else {
-                                parentViewFileUri = undefined;
-                            }
-                        } while (1);
-                        if (parentViewFileUri) {
-                            // file was found in the parents
-                            return parentViewFileUri;
+                    }
+                    // if not found - try to look into 'base' folder
+                    viewFileUri = this.appendUri(extension.extensionUri, 'view', 'base', fileType, matches.groups.path + '.' + matches.groups.ext);
+                    if (await this.fileExists(viewFileUri)) {
+                        return viewFileUri;
+                    }
+                }
+            } else if (data.kind === ExtentionKind.Theme) {
+                extensionUri = data.extensionUri;
+                let fileType;
+                if (matches.groups.ext === 'phtml') {
+                    fileType = 'templates';
+                } else {
+                    fileType = 'web';
+                }
+                let viewFileUri = this.appendUri(extensionUri,  matches.groups.vendor+'_'+matches.groups.extension, fileType, matches.groups.path + '.' + matches.groups.ext);
+                if (await this.fileExists(viewFileUri)) {
+                    return viewFileUri;
+                } else {
+                    let parentViewFileUri;
+                    let parentTheme: UriData | undefined = data;
+                    do {
+                        parentTheme = await this.getParentTheme(parentTheme);
+                        if (!parentTheme) {
+                            break;
+                        }
+                        parentViewFileUri = this.appendUri(parentTheme.extensionUri,  matches.groups.vendor+'_'+matches.groups.extension, fileType, matches.groups.path + '.' + matches.groups.ext);
+                        if (await this.fileExists(parentViewFileUri)) {
+                            break;
                         } else {
-                            // lets find that file in a extension
-                            let extensionData = await this.getUriData(this.appendUri(this.getExtensionFolder(matches.groups.vendor, matches.groups.extension), 'etc/module.xml'));
-                            if (extensionData) {
-                                extensionData.type = 'view';
-                                extensionData.area = 'frontend';
-                                return this.getViewFile(extensionData, viewFile);
-                            }
+                            parentViewFileUri = undefined;
+                        }
+                    } while (1);
+                    if (parentViewFileUri) {
+                        // file was found in the parents
+                        return parentViewFileUri;
+                    } else {
+                        // lets find that file in a extension
+                        let extensionUri = this.getExtensionFolder(matches.groups.vendor, matches.groups.extension);
+                        if (!extensionUri) {
+                            return undefined;
+                        }
+                        let extensionData = await this.getUriData(this.appendUri(extensionUri, 'etc/module.xml'));
+                        if (extensionData) {
+                            extensionData.type = 'view';
+                            extensionData.area = 'frontend';
+                            return this.getViewFile(extensionData, viewFile);
                         }
                     }
                 }
@@ -654,29 +642,14 @@ class Magento {
     }
 
     async getParentTheme(data: UriData): Promise<UriData | undefined> {
-        let themeXmlUri: Uri = this.appendUri(data.extensionUri, 'theme.xml');
-        if (!await this.fileExists(themeXmlUri)) {
-            return undefined;
-        }
-        let themeXml = await this.readFile(themeXmlUri);
-        try {
-            var xml: any = convert.xml2js(themeXml, {
-                compact: true,
-            });
-            if(xml.theme.parent._text) {
-                const [vendor, theme] = xml.theme.parent._text.split('/');
-                let themeUri;
-                themeUri = this.appendUri(data.workspace.uri, 'app/design/frontend', vendor, theme, 'theme.xml');
-                if (await this.fileExists(themeUri)) {
-                    return this.getUriData(themeUri);
-                }
-                themeUri = this.appendUri(data.workspace.uri, 'vendor', Case.kebab(vendor), 'theme-frontend-'+Case.kebab(theme), 'theme.xml');
-                if (await this.fileExists(themeUri)) {
-                    return this.getUriData(themeUri);
-                }
+
+        let [area, vendor, theme] = data.parent.split('/');
+
+
+        for(let module of this.indexer[this.folder.uri.fsPath].paths.theme) {
+            if (module.area === area && module.vendor === vendor && module.extension === theme) {
+                return module;
             }
-        } catch (e) {
-            return undefined;
         }
         return undefined;
     }

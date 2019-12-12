@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import createQuickPickCustom, { QuickPickCustomOptons } from './quickPickCustom';
+import createWorkspacePick from './workspaceFolderPick';
 import magento, { ExtensionInfo, ExtentionKind }  from './magento';
 import createExtension from './actions/createExtension';
 import injectDependency from './actions/injectDependency';
@@ -11,54 +12,82 @@ import { MagentoTaskProvider } from './actions/MagentoTaskProvider';
 import { definitionProvider } from './actions/definitionProvider';
 import Indexer from './indexer';
 
-async function getVendorExtension(options?: QuickPickCustomOptons): Promise<ExtensionInfo | undefined> {
-    if (!options) {
-        options = {};
-    }
-    options.step = options.step || 1;
-    options.totalSteps = options.totalSteps || 2;
-    let currentWorkspace: vscode.WorkspaceFolder | undefined;
-    if (!vscode.workspace.workspaceFolders) {
-        throw new Error('No workspace folders found');
-    }
-    currentWorkspace = vscode.workspace.workspaceFolders[0];
-    if (vscode.workspace.workspaceFolders.length > 1) {
-        currentWorkspace = await vscode.window.showWorkspaceFolderPick();
-    } else {
-        currentWorkspace = vscode.workspace.workspaceFolders[0];
-    }
-    if (!currentWorkspace) {
-        return undefined;
-    }
-    magento.folder = currentWorkspace;
-    let vendors = magento.getVendors();
-    let vendor = await createQuickPickCustom(vendors, Object.assign({}, options, { title: options.custom ? 'Please enter Vendor name' : 'Please select Vendor' }));
-    let extension;
-    if (vendor) {
-        options.step++;
-        if (options.custom) {
-            extension = await createQuickPickCustom([], Object.assign({}, options, { title: 'Enter Extension Name' }));
-        } else {
-            let extensions = magento.getExtensions(vendor);
-            extension = await createQuickPickCustom(extensions, Object.assign({}, options, { title: 'Please select Extension' }));
-        }
-        if (extension) {
-            let extensionFolder = `app/code/${vendor}/${extension}`;
-            return {
-                workspace: currentWorkspace,
-                vendor,
-                extension,
-                extensionFolder,
-                componentName: vendor+'_'+extension,
-                extensionUri: magento.appendUri(currentWorkspace.uri, extensionFolder),
-            };
-        }
-    } else {
-        return undefined;
-    }
-}
-
 export function activate(context: vscode.ExtensionContext) {
+
+    async function getWorkspaceFolder(): Promise <vscode.WorkspaceFolder | undefined> {
+        if (vscode.workspace.workspaceFolders) {
+            let magentoFolders = [];
+            for(let workspaceFolder of vscode.workspace.workspaceFolders) {
+                if (!magento.indexer[workspaceFolder.uri.fsPath]) {
+                    magento.indexer[workspaceFolder.uri.fsPath] = new Indexer(context, workspaceFolder);
+                }
+                if (await magento.indexer[workspaceFolder.uri.fsPath].magentoRoot) {
+                    magentoFolders.push(workspaceFolder);
+                }
+            }
+            if (magentoFolders.length === 1) {
+                return magentoFolders[0];
+            }
+
+            return createWorkspacePick(magentoFolders, { title: 'Select workspace folder' });
+        } else {
+            // no workspace folders
+            return undefined;
+        }
+    }
+
+    async function getVendorExtension(options?: QuickPickCustomOptons): Promise<ExtensionInfo | undefined> {
+        if (!options) {
+            options = {};
+        }
+        options.step = options.step || 1;
+        options.totalSteps = options.totalSteps || 2;
+        let currentWorkspace: vscode.WorkspaceFolder | undefined;
+        if (!vscode.workspace.workspaceFolders) {
+            throw new Error('No workspace folders found');
+        }
+        currentWorkspace = await getWorkspaceFolder();
+        if (!currentWorkspace) {
+            return undefined;
+        }
+        magento.folder = currentWorkspace;
+        let vendors = magento.getVendors();
+        let vendor = await createQuickPickCustom(vendors, Object.assign({}, options, { title: options.custom ? 'Please enter Vendor name' : 'Please select Vendor' }));
+        let extension;
+        if (vendor) {
+            options.step++;
+            if (options.custom) {
+                extension = await createQuickPickCustom([], Object.assign({}, options, { title: 'Enter Extension Name' }));
+            } else {
+                let extensions = magento.getExtensions(vendor);
+                extension = await createQuickPickCustom(extensions, Object.assign({}, options, { title: 'Please select Extension' }));
+            }
+            if (extension) {
+                // return magento.indexer[currentWorkspace.uri.fsPath].findByVendorExtension(vendor, extension);
+                if (magento.indexer[currentWorkspace.uri.fsPath]) {
+                    magento.folder = currentWorkspace;
+                    let data = magento.getIndexer().findByVendorExtension(vendor, extension);
+                    if (data) {
+                        // extension exists, return it's data from index
+                        return data;
+                    }
+                    // extension would be created
+                    let extensionFolder = magento.appendUri(await magento.getAppCodeUri(), vendor, extension).fsPath;
+                    return {
+                        workspace: currentWorkspace,
+                        vendor,
+                        extension,
+                        extensionFolder,
+                        componentName: vendor+'_'+extension,
+                        extensionUri: magento.appendUri(currentWorkspace.uri, extensionFolder),
+                    };
+                }
+            }
+        } else {
+            return undefined;
+        }
+    }
+
     if (vscode.workspace.workspaceFolders) {
         for(let workspaceFolder of vscode.workspace.workspaceFolders) {
             context.subscriptions.push(vscode.tasks.registerTaskProvider(MagentoTaskProvider.MagentoScriptType, new MagentoTaskProvider(workspaceFolder)));
@@ -71,6 +100,7 @@ export function activate(context: vscode.ExtensionContext) {
         if (!data) {
             return;
         }
+        magento.folder = data.workspace;
         try {
             await createExtension(data.vendor, data.extension);
             vscode.window.showInformationMessage(`Created extension ${data.vendor}_${data.extension}`);
@@ -82,6 +112,7 @@ export function activate(context: vscode.ExtensionContext) {
         let textEditor = vscode.window.activeTextEditor;
         try {
             if (!textEditor || textEditor.document.languageId !== 'php') {
+                // TODO add separate message when there is no open file
                 throw new Error('Only supported for PHP files');
             }
             let data = await magento.getUriData(textEditor.document.uri);

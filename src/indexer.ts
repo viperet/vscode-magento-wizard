@@ -1,8 +1,9 @@
-import { Uri, workspace, WorkspaceFolder, RelativePattern, ExtensionContext, WorkspaceConfiguration, window } from 'vscode';
+import { Uri, workspace, WorkspaceFolder, RelativePattern, ExtensionContext, WorkspaceConfiguration, window, FileSystemWatcher, Disposable } from 'vscode';
 import * as path  from 'path';
 import magento, { UriData, ExtentionKind } from './magento';
 import * as convert  from 'xml-js';
 import * as PProgress from 'p-progress';
+import * as fs from 'fs';
 
 interface RegistrationData {
     module: UriData[];
@@ -14,9 +15,11 @@ interface RegistrationData {
 
 export default class Indexer {
     public workspaceFolder: WorkspaceFolder;
+    public magentoRoot: Promise <Uri | undefined>;
     private context: ExtensionContext;
     private php: string = 'php';
-    private paths: RegistrationData = {
+    private disposables: { dispose: () => any }[] = [];
+    public paths: RegistrationData = {
         module: [],
         library: [],
         language: [],
@@ -28,7 +31,17 @@ export default class Indexer {
         this.workspaceFolder = workspaceFolder;
         this.context = context;
         this.readConfig();
-        this.index();
+        this.magentoRoot = this.index();
+        this.magentoRoot.then(magentoRoot => {
+            if (magentoRoot) {
+                // only watch for changes if this folder contains magento
+                this.watch();
+            }
+        });
+    }
+
+    public dispose() {
+        Disposable.from(...this.disposables).dispose();
     }
 
     private readConfig() {
@@ -36,18 +49,32 @@ export default class Indexer {
         this.php = config.get('magentoWizard.tasks.php') || 'php';
     }
 
-    async index(): Promise<void> {
+    async index(): Promise< Uri | undefined> {
+        let magentoRoot: Uri;
         const statusText = 'MagentoWizard indexing extensions/themes ';
         const status = window.createStatusBarItem();
         status.text = statusText;
         status.show();
+
+        const env = await workspace.findFiles(new RelativePattern(this.workspaceFolder, '**/app/etc/env.php'), '**/{tests,vendor}/**', 1);
+        if (env.length > 0) {
+            magentoRoot = magento.appendUri(env[0], '..', '..', '..');
+        } else {
+            status.dispose();
+            return undefined;
+        }
         const files = await workspace.findFiles(new RelativePattern(this.workspaceFolder, '**/{app,vendor}/**/registration.php'), '**/tests/**');
         const registrations =  PProgress.all(files.map(file => this.register.bind(this, file)), { concurrency: 5});
         registrations.onProgress(progress => status.text = statusText+Math.round(progress*100)+'%');
         await registrations;
-        window.showErrorMessage(`Modules count: ${this.paths.module.length}`);
         status.dispose();
-        return;
+        return magentoRoot;
+    }
+
+    async indexFolder(folder: Uri): Promise <unknown> {
+        const files = await workspace.findFiles(new RelativePattern(folder.fsPath, '**/registration.php'));
+        console.log('Found files', files);
+        return Promise.all(files.map(file => this.register(file)));
     }
 
     async register(file: Uri): Promise<undefined> {
@@ -60,7 +87,6 @@ export default class Indexer {
                 this.paths.theme.push(...await this.indexTheme(paths.theme));
             }
         } catch(e) {
-            console.log(e);
         }
         return;
     }
@@ -92,7 +118,7 @@ export default class Indexer {
 
             components.push({
                 kind: ExtentionKind.Module,
-                extensionFolder: path.dirname(registrations[componentName]),
+                extensionFolder: path.normalize(registrations[componentName])+path.sep,
                 extensionUri,
                 componentName,
                 workspace: workspace.getWorkspaceFolder(extensionUri)!,
@@ -126,7 +152,7 @@ export default class Indexer {
 
             components.push({
                 kind: ExtentionKind.Theme,
-                extensionFolder: registrations[componentName],
+                extensionFolder: path.normalize(registrations[componentName])+path.sep,
                 extensionUri,
                 componentName,
                 workspace: workspace.getWorkspaceFolder(extensionUri)!,
@@ -143,15 +169,82 @@ export default class Indexer {
         return components;
     }
 
+    async watch() {
+        let magentoRoot = (await this.magentoRoot)!.fsPath;
+        let registrationWatcher = workspace.createFileSystemWatcher(new RelativePattern(magentoRoot, '{app,vendor}/**/registration.php'));
+        registrationWatcher.onDidDelete(file => {
+            console.log('Deleted '+file.fsPath);
+            for(let extensions of [this.paths.module, this.paths.theme, this.paths.library, this.paths.setup, this.paths.language]) {
+                extensions = extensions.filter(extension => file.fsPath !== extension.extensionFolder+path.sep+'registration.php');
+            }
+        });
+        registrationWatcher.onDidChange(file => {
+            console.log('Changed '+file.fsPath);
+            for(let extensions of [this.paths.module, this.paths.theme, this.paths.library, this.paths.setup, this.paths.language]) {
+                extensions = extensions.filter(extension => file.fsPath !== extension.extensionFolder+path.sep+'registration.php');
+            }
+            this.register(file);
+        });
+        registrationWatcher.onDidCreate(file => {
+            console.log('Created '+file.fsPath);
+            this.register(file);
+        });
+        this.disposables.push(registrationWatcher);
+        let everythingWatcher = workspace.createFileSystemWatcher(new RelativePattern(magentoRoot, '{app,vendor}/**'));
+        everythingWatcher.onDidDelete(file => {
+            // if (fs.statSync(file.fsPath).isDirectory()) {
+                console.log('Deleted: '+file.fsPath);
+                this.paths.module = this.paths.module.filter(extension => !extension.extensionFolder.startsWith(file.fsPath));
+                // for(let extensions of [this.paths.module, this.paths.theme, this.paths.library, this.paths.setup, this.paths.language]) {
+                //     extensions = extensions.filter(extension => !extension.extensionFolder.startsWith(file.fsPath));
+                // }
+                console.log('After deletion', this.paths.module);
+            // }
+        });
+        everythingWatcher.onDidChange(file => {
+            console.log('Changed: '+file.fsPath);
+        });
+        everythingWatcher.onDidCreate(async file => {
+            console.log('Created: '+file.fsPath);
+            if (fs.statSync(file.fsPath).isDirectory()) {
+                await this.indexFolder(file);
+                console.log('After creation', this.paths.module);
+            }
+        });
+        this.disposables.push(registrationWatcher);
+    }
+
     findByUri(path: Uri): UriData | undefined {
-        for(let extensions of [this.paths.module, this.paths.theme]) {
+        for(let extensions of [this.paths.module, this.paths.theme, this.paths.library, this.paths.setup, this.paths.language]) {
             for(let extension of extensions) {
                 if (path.fsPath.startsWith(extension.extensionFolder)) {
                     return extension;
                 }
             }
         }
+        return undefined;
+    }
 
+    findByClassName(className: string): UriData | undefined {
+        let classNameNormalized = className.split('\\').filter(Boolean).join('\\')+'\\';
+        for(let extensions of [this.paths.module, this.paths.library, this.paths.setup]) {
+            for(let module of extensions) {
+                if (classNameNormalized.startsWith(module.namespace)) {
+                    return module;
+                }
+            }
+        }
+        return undefined;
+    }
+
+    findByVendorExtension(vendor: string, extension: string): UriData | undefined {
+        for(let extensions of [this.paths.module, this.paths.library, this.paths.setup]) {
+            for(let module of extensions) {
+                if (module.vendor === vendor && module.extension === extension) {
+                    return module;
+                }
+            }
+        }
         return undefined;
     }
 }
