@@ -4,6 +4,7 @@ import magento, { UriData, ExtentionKind } from './magento';
 import * as convert  from 'xml-js';
 import * as PProgress from 'p-progress';
 import * as fs from 'fs';
+import * as _ from 'lodash';
 
 interface RegistrationData {
     module: UriData[];
@@ -67,6 +68,7 @@ export default class Indexer {
         const registrations =  PProgress.all(files.map(file => this.register.bind(this, file)), { concurrency: 5});
         registrations.onProgress(progress => status.text = statusText+Math.round(progress*100)+'%');
         await registrations;
+        console.log('Modules '+this.paths.module.length);
         status.dispose();
         return magentoRoot;
     }
@@ -74,7 +76,10 @@ export default class Indexer {
     async indexFolder(folder: Uri): Promise <unknown> {
         const files = await workspace.findFiles(new RelativePattern(folder.fsPath, '**/registration.php'));
         console.log('Found files', files);
-        return Promise.all(files.map(file => this.register(file)));
+        await Promise.all(files.map(file => this.register(file)));
+        this.paths.module = _.uniqBy(this.paths.module, extension => extension.extensionFolder);
+        this.paths.theme = _.uniqBy(this.paths.theme, extension => extension.extensionFolder);
+        return;
     }
 
     async register(file: Uri): Promise<undefined> {
@@ -173,40 +178,34 @@ export default class Indexer {
         let magentoRoot = (await this.magentoRoot)!.fsPath;
         let registrationWatcher = workspace.createFileSystemWatcher(new RelativePattern(magentoRoot, '{app,vendor}/**/registration.php'));
         registrationWatcher.onDidDelete(file => {
-            console.log('Deleted '+file.fsPath);
-            for(let extensions of [this.paths.module, this.paths.theme, this.paths.library, this.paths.setup, this.paths.language]) {
-                extensions = extensions.filter(extension => file.fsPath !== extension.extensionFolder+path.sep+'registration.php');
-            }
+            console.log('Deleted - '+file.fsPath);
+            this.paths.module = this.paths.module.filter(extension => !extension.extensionFolder.startsWith(path.dirname(file.fsPath)+path.sep));
+            this.paths.theme = this.paths.theme.filter(extension => !extension.extensionFolder.startsWith(path.dirname(file.fsPath)+path.sep));
+            console.log('After delete', this.paths.module);
         });
-        registrationWatcher.onDidChange(file => {
-            console.log('Changed '+file.fsPath);
-            for(let extensions of [this.paths.module, this.paths.theme, this.paths.library, this.paths.setup, this.paths.language]) {
-                extensions = extensions.filter(extension => file.fsPath !== extension.extensionFolder+path.sep+'registration.php');
-            }
-            this.register(file);
+        registrationWatcher.onDidChange(async file => {
+            console.log('Changed - '+file.fsPath);
+            this.paths.module = this.paths.module.filter(extension => !extension.extensionFolder.startsWith(path.dirname(file.fsPath)+path.sep));
+            this.paths.theme = this.paths.theme.filter(extension => !extension.extensionFolder.startsWith(path.dirname(file.fsPath)+path.sep));
+            await this.register(file);
+            console.log('After change', this.paths.module);
         });
-        registrationWatcher.onDidCreate(file => {
-            console.log('Created '+file.fsPath);
-            this.register(file);
+        registrationWatcher.onDidCreate(async file => {
+            console.log('Changed - '+file.fsPath);
+            await this.register(file);
+            console.log('After create', this.paths.module);
         });
         this.disposables.push(registrationWatcher);
         let everythingWatcher = workspace.createFileSystemWatcher(new RelativePattern(magentoRoot, '{app,vendor}/**'));
         everythingWatcher.onDidDelete(file => {
-            // if (fs.statSync(file.fsPath).isDirectory()) {
-                console.log('Deleted: '+file.fsPath);
-                this.paths.module = this.paths.module.filter(extension => !extension.extensionFolder.startsWith(file.fsPath));
-                // for(let extensions of [this.paths.module, this.paths.theme, this.paths.library, this.paths.setup, this.paths.language]) {
-                //     extensions = extensions.filter(extension => !extension.extensionFolder.startsWith(file.fsPath));
-                // }
-                console.log('After deletion', this.paths.module);
-            // }
-        });
-        everythingWatcher.onDidChange(file => {
-            console.log('Changed: '+file.fsPath);
+            console.log('Deleted: '+file.fsPath);
+            this.paths.module = this.paths.module.filter(extension => !extension.extensionFolder.startsWith(file.fsPath));
+            this.paths.theme = this.paths.theme.filter(extension => !extension.extensionFolder.startsWith(file.fsPath));
+            console.log('After deletion', this.paths.module);
         });
         everythingWatcher.onDidCreate(async file => {
-            console.log('Created: '+file.fsPath);
             if (fs.statSync(file.fsPath).isDirectory()) {
+                console.log('Created: '+file.fsPath);
                 await this.indexFolder(file);
                 console.log('After creation', this.paths.module);
             }

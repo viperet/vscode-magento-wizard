@@ -25,7 +25,7 @@ class ComponentRegistrar {
 
     public static function getPaths()
     {
-        return \json_encode(self::$paths);
+        return \json_encode(self::$paths, JSON_FORCE_OBJECT);
     }
 }
 
