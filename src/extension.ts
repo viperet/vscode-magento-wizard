@@ -91,7 +91,11 @@ export function activate(context: vscode.ExtensionContext) {
     if (vscode.workspace.workspaceFolders) {
         for(let workspaceFolder of vscode.workspace.workspaceFolders) {
             context.subscriptions.push(vscode.tasks.registerTaskProvider(MagentoTaskProvider.MagentoScriptType, new MagentoTaskProvider(workspaceFolder)));
-            magento.indexer[workspaceFolder.uri.fsPath] = new Indexer(context, workspaceFolder);
+            try {
+                magento.indexer[workspaceFolder.uri.fsPath] = new Indexer(context, workspaceFolder);
+            } catch(e) {
+                vscode.window.showErrorMessage(e.message);
+            }
         }
     }
 

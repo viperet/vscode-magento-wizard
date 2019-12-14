@@ -48,6 +48,12 @@
                         "default": "",
                         "markdownDescription": "Magento file system owner user, see [Overview of ownership and permissions](https://devdocs.magento.com/guides/v2.3/install-gde/prereq/file-sys-perms-over.html) for details. MagentoWizard uses `sudo -u <username> bin/magento`, so you should [configure your system](https://github.com/viperet/vscode-magento-wizard/wiki/Allow-sudo-to-run-commands-as-certain-user-without-password) to allow sudo without asking a password.  Current user will be used if empty.",
                         "scope": "resource"
+                    },
+                    "magentoWizard.magentoRoot": {
+                        "type": "string",
+                        "default": "",
+                        "description": "Path to the root of Magento, absoulute or relative to the workspace folder. Autodetected if empty.",
+                        "scope": "resource"
                     }
                 }
             }

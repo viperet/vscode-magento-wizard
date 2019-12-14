@@ -1,4 +1,4 @@
-import { Uri, workspace, WorkspaceFolder, RelativePattern, ExtensionContext, WorkspaceConfiguration, window, FileSystemWatcher, Disposable } from 'vscode';
+import { Uri, workspace, WorkspaceFolder, RelativePattern, ExtensionContext, WorkspaceConfiguration, window, FileSystemWatcher, Disposable, ConfigurationChangeEvent } from 'vscode';
 import * as path  from 'path';
 import magento, { UriData, ExtentionKind } from './magento';
 import * as convert  from 'xml-js';
@@ -16,7 +16,9 @@ interface RegistrationData {
 
 export default class Indexer {
     public workspaceFolder: WorkspaceFolder;
+    //@ts-ignore
     public magentoRoot: Promise <Uri | undefined>;
+    private magentoRootConfig: string = "";
     private context: ExtensionContext;
     private php: string = 'php';
     private disposables: { dispose: () => any }[] = [];
@@ -31,8 +33,11 @@ export default class Indexer {
     constructor(context: ExtensionContext, workspaceFolder: WorkspaceFolder) {
         this.workspaceFolder = workspaceFolder;
         this.context = context;
+        // read config and start indexing
         this.readConfig();
-        this.magentoRoot = this.index();
+        workspace.onDidChangeConfiguration(change => this.readConfig(change));
+
+        //@ts-ignore
         this.magentoRoot.then(magentoRoot => {
             if (magentoRoot) {
                 // only watch for changes if this folder contains magento
@@ -45,9 +50,16 @@ export default class Indexer {
         Disposable.from(...this.disposables).dispose();
     }
 
-    private readConfig() {
-        const config = workspace.getConfiguration('', this.workspaceFolder.uri);
-        this.php = config.get('magentoWizard.tasks.php') || 'php';
+    private readConfig(change?: ConfigurationChangeEvent) {
+        const config = workspace.getConfiguration('magentoWizard', this.workspaceFolder.uri);
+        if (!change || change.affectsConfiguration('magentoWizard.tasks.php', this.workspaceFolder.uri)) {
+            this.php = config.get('tasks.php') || 'php';
+        }
+        if (!change || change.affectsConfiguration('magentoWizard.magentoRoot', this.workspaceFolder.uri)) {
+            let newMagentoRootConfig: string = config.get('magentoRoot') || '';
+            this.magentoRootConfig = newMagentoRootConfig;
+            this.magentoRoot = this.index();
+        }
     }
 
     async index(): Promise< Uri | undefined> {
@@ -57,14 +69,39 @@ export default class Indexer {
         status.text = statusText;
         status.show();
 
-        const env = await workspace.findFiles(new RelativePattern(this.workspaceFolder, '**/app/etc/env.php'), '**/{tests,vendor}/**', 1);
-        if (env.length > 0) {
-            magentoRoot = magento.appendUri(env[0], '..', '..', '..');
+        this.paths = {
+            module: [],
+            library: [],
+            language: [],
+            theme: [],
+            setup: [],
+        };
+
+        // absolute path
+        if (this.magentoRootConfig.trim()) {
+            let magentoRootConfig;
+            try {
+                magentoRootConfig = path.resolve(this.workspaceFolder.uri.fsPath, this.magentoRootConfig);
+                const stats = fs.statSync(magentoRootConfig);
+                if (!stats.isDirectory()) {
+                    throw new Error('Not a dir!');
+                }
+            } catch {
+                status.dispose();
+                window.showErrorMessage(`Configured Magento root doesn't exists or not a directory: ${magentoRootConfig}`);
+                return undefined;
+            }
+            magentoRoot = Uri.file(magentoRootConfig);
         } else {
-            status.dispose();
-            return undefined;
+            const env = await workspace.findFiles(new RelativePattern(this.workspaceFolder, '**/app/etc/env.php'), '**/{tests,vendor}/**', 1);
+            if (env.length > 0) {
+                magentoRoot = magento.appendUri(env[0], '..', '..', '..');
+            } else {
+                status.dispose();
+                return undefined;
+            }
         }
-        const files = await workspace.findFiles(new RelativePattern(this.workspaceFolder, '**/{app,vendor}/**/registration.php'), '**/tests/**');
+        const files = await workspace.findFiles(new RelativePattern(magentoRoot.fsPath, '**/{app,vendor}/**/registration.php'), '**/tests/**');
         const registrations =  PProgress.all(files.map(file => this.register.bind(this, file)), { concurrency: 5});
         registrations.onProgress(progress => status.text = statusText+Math.round(progress*100)+'%');
         await registrations;
