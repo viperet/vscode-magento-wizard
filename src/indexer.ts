@@ -5,6 +5,7 @@ import * as convert  from 'xml-js';
 import * as PProgress from 'p-progress';
 import * as fs from 'fs';
 import * as _ from 'lodash';
+import * as output from './output';
 
 interface RegistrationData {
     module: UriData[];
@@ -105,14 +106,14 @@ export default class Indexer {
         const registrations =  PProgress.all(files.map(file => this.register.bind(this, file)), { concurrency: 5});
         registrations.onProgress(progress => status.text = statusText+Math.round(progress*100)+'%');
         await registrations;
-        console.log('Modules '+this.paths.module.length);
         status.dispose();
         return magentoRoot;
     }
 
     async indexFolder(folder: Uri): Promise <unknown> {
+        output.debug(`Indexing folder ${folder.fsPath}`);
         const files = await workspace.findFiles(new RelativePattern(folder.fsPath, '**/registration.php'));
-        console.log('Found files', files);
+        output.debug('Found files registration files:', files.map(file => file.fsPath).join(', '));
         await Promise.all(files.map(file => this.register(file)));
         this.paths.module = _.uniqBy(this.paths.module, extension => extension.extensionFolder);
         this.paths.theme = _.uniqBy(this.paths.theme, extension => extension.extensionFolder);
@@ -127,6 +128,10 @@ export default class Indexer {
             if (paths) {
                 this.paths.module.push(...await this.indexModule(paths.module));
                 this.paths.theme.push(...await this.indexTheme(paths.theme));
+            }
+            if (stderr) {
+                output.log(`Error while registering ${file.fsPath}`);
+                output.log(stderr);
             }
         } catch(e) {
         }
@@ -147,7 +152,8 @@ export default class Indexer {
                     }
                 }
             } catch(e) {
-                console.log(e);
+                output.log(`Exception while indexing ${componentName} in ${registrations[componentName]}`);
+                output.log(e.name, e.message, e.stack);
             }
             const [vendor, extension] = extensionNamespace.split('\\');
 
@@ -215,36 +221,31 @@ export default class Indexer {
         let magentoRoot = (await this.magentoRoot)!.fsPath;
         let registrationWatcher = workspace.createFileSystemWatcher(new RelativePattern(magentoRoot, '{app,vendor}/**/registration.php'));
         registrationWatcher.onDidDelete(file => {
-            console.log('Deleted - '+file.fsPath);
+            output.debug('FileSystemWatcher: Deleted file', file.fsPath);
             this.paths.module = this.paths.module.filter(extension => !extension.extensionFolder.startsWith(path.dirname(file.fsPath)+path.sep));
             this.paths.theme = this.paths.theme.filter(extension => !extension.extensionFolder.startsWith(path.dirname(file.fsPath)+path.sep));
-            console.log('After delete', this.paths.module);
         });
         registrationWatcher.onDidChange(async file => {
-            console.log('Changed - '+file.fsPath);
+            output.debug('FileSystemWatcher: Changed file', file.fsPath);
             this.paths.module = this.paths.module.filter(extension => !extension.extensionFolder.startsWith(path.dirname(file.fsPath)+path.sep));
             this.paths.theme = this.paths.theme.filter(extension => !extension.extensionFolder.startsWith(path.dirname(file.fsPath)+path.sep));
             await this.register(file);
-            console.log('After change', this.paths.module);
         });
         registrationWatcher.onDidCreate(async file => {
-            console.log('Changed - '+file.fsPath);
+            output.debug('FileSystemWatcher: Created file', file.fsPath);
             await this.register(file);
-            console.log('After create', this.paths.module);
         });
         this.disposables.push(registrationWatcher);
         let everythingWatcher = workspace.createFileSystemWatcher(new RelativePattern(magentoRoot, '{app,vendor}/**'));
         everythingWatcher.onDidDelete(file => {
-            console.log('Deleted: '+file.fsPath);
+            output.debug('FileSystemWatcher: Deleted', file.fsPath);
             this.paths.module = this.paths.module.filter(extension => !extension.extensionFolder.startsWith(file.fsPath));
             this.paths.theme = this.paths.theme.filter(extension => !extension.extensionFolder.startsWith(file.fsPath));
-            console.log('After deletion', this.paths.module);
         });
         everythingWatcher.onDidCreate(async file => {
             if (fs.statSync(file.fsPath).isDirectory()) {
-                console.log('Created: '+file.fsPath);
+                output.debug('FileSystemWatcher: Created dir', file.fsPath);
                 await this.indexFolder(file);
-                console.log('After creation', this.paths.module);
             }
         });
         this.disposables.push(registrationWatcher);

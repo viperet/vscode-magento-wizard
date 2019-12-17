@@ -1,8 +1,6 @@
-import * as path from 'path';
 import * as vscode from 'vscode';
-import * as cp from 'child_process';
 import magento from '../magento';
-import * as fs from 'fs';
+import * as output from '../output';
 
 interface MagentoTaskDefinition extends vscode.TaskDefinition {
     /**
@@ -22,16 +20,17 @@ export class MagentoTaskProvider implements vscode.TaskProvider {
     private php: string = 'php';
     private user: string = '';
     private config: vscode.WorkspaceConfiguration;
-
+    private folder: string;
     private sharedState: string | undefined;
 
     constructor(private workspaceFolder: vscode.WorkspaceFolder) {
         this.config = vscode.workspace.getConfiguration('', this.workspaceFolder.uri);
+        this.folder = workspaceFolder.uri.fsPath;
         this.readConfig();
     }
 
     public async provideTasks(): Promise<vscode.Task[]> {
-        return await this.getTasks();
+        return this.getTasks();
     }
 
     public resolveTask(_task: vscode.Task): vscode.Task | undefined {
@@ -47,7 +46,9 @@ export class MagentoTaskProvider implements vscode.TaskProvider {
         if (this.tasks !== undefined) {
             return this.tasks;
         }
-        if (!await magento.fileExists(magento.appendUri(this.workspaceFolder.uri, 'bin/magento'))) {
+        let magentoRoot = await magento.indexer[this.folder].magentoRoot;
+
+        if (!magentoRoot || !await magento.fileExists(magento.appendUri(magentoRoot, 'bin/magento'))) {
             // if there is no bin/magento in this workspace folder - return no tasks
             return [];
         }
@@ -56,7 +57,8 @@ export class MagentoTaskProvider implements vscode.TaskProvider {
         this.tasks = [];
 
         try {
-            let { stdout, stderr } = await magento.exec(commandLine, { cwd: this.workspaceFolder.uri.fsPath });
+            output.log(`Running '${commandLine}' in ${magentoRoot.fsPath}`);
+            let { stdout, stderr } = await magento.exec(commandLine, { cwd: magentoRoot.fsPath });
             if (stdout) {
                 let lines = stdout.split(/\r{0,1}\n/);
                 let matchCommands = false;
@@ -77,6 +79,7 @@ export class MagentoTaskProvider implements vscode.TaskProvider {
                 }
             }
         } catch (err) {
+            output.log(`Error running '${commandLine}' in ${magentoRoot.fsPath}:`, err.stderr, err.stdout);
             if (err.stderr.match(/askpass/)) {
                 vscode.window.showErrorMessage(`Can't run bin/magento as "${this.user}", please allow to sudo as that user without a password`, 'More info').then(value => {
                     if (value) {
@@ -84,7 +87,8 @@ export class MagentoTaskProvider implements vscode.TaskProvider {
                     }
                 });
             } else {
-                vscode.window.showErrorMessage(`Error running "${commandLine}":\n${err.stderr}`);
+                // TODO allow to disable task provider for this folder
+                vscode.window.showErrorMessage(`Error running "${commandLine}":\n${err.stdout}`);
             }
             this.tasks = undefined;
             return [];

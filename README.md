@@ -31,7 +31,7 @@ This extension will ease life of the Magento 2 developer by automating some repe
 - [ ] Adding custom attribute to products, categories, orders, customers, etc.
 - [x] Add Magento tasks like setup:upgrade, cache:clean to VSC tasks
 - [ ] Watch for changes in *.xml, *.phtml, *.php and clear corresponding cache type (like [magento-cache-clean](https://github.com/mage2tv/magento-cache-clean) extension)
-- [ ] Go to definition function for class and template referrences in *.xml files
+- [x] Go to definition function for class and template referrences in *.xml files
 - [ ] More templates
 
 ## Release Notes
