@@ -30,8 +30,9 @@
         "onCommand:magentowizard.addObserver",
         "onCommand:magentowizard.generateCatalog",
         "onCommand:magentowizard.addPlugin",
-        "workspaceContains:/app/etc/env.php",
-        "workspaceContains:/app/etc/di.xml"
+        "workspaceContains:**/app/etc/env.php",
+        "workspaceContains:**/app/etc/di.xml",
+        "workspaceContains:**/bin/magento"
     ],
     "main": "./dist/extension.js",
     "contributes": {
