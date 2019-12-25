@@ -196,19 +196,26 @@ export default class Indexer {
             let extensionUri = Uri.file(registrations[componentName]);
             let extensionNamespace = componentName.split('_').join('\\')+'\\';
             // TODO handle extensions without composer.json (in /app/code ?)
-            try {
-                const composerJson = JSON.parse(await magento.readFile(magento.appendUri(extensionUri, 'composer.json')));
-                for(let namespace in composerJson.autoload['psr-4']) {
-                    if (composerJson.autoload['psr-4'][namespace] === '') {
-                        extensionNamespace = namespace;
-                        break;
+            const composerJsonUri = magento.appendUri(extensionUri, 'composer.json');
+            if (await magento.fileExists(composerJsonUri)) {
+                try {
+                    const composerJson = JSON.parse(await magento.readFile(composerJsonUri));
+                    for(let namespace in composerJson.autoload['psr-4']) {
+                        if (composerJson.autoload['psr-4'][namespace] === '') {
+                            extensionNamespace = namespace;
+                            break;
+                        }
                     }
+                } catch(e) {
+                    output.log(`Exception while indexing ${componentName} in ${registrations[componentName]}`);
+                    output.log(e.name, e.message, e.stack);
                 }
-            } catch(e) {
-                output.log(`Exception while indexing ${componentName} in ${registrations[componentName]}`);
-                output.log(e.name, e.message, e.stack);
+            } else {
+                // no composer.json
+                extensionNamespace = componentName.split('_').join('\\')+'\\';
+
             }
-            const [vendor, extension] = extensionNamespace.split('\\');
+            const [vendor, extension] = componentName.split('_');
 
             // let classes: string[] = [];
             // const files = await workspace.findFiles(new RelativePattern(registrations[componentName], '**/*.php'), 'registration.php');
