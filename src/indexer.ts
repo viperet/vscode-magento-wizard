@@ -13,6 +13,7 @@ interface RegistrationData {
     language: UriData[];
     theme: UriData[];
     setup: UriData[];
+    registrations: { [registration: string]: number };
 }
 
 export default class Indexer {
@@ -29,6 +30,7 @@ export default class Indexer {
         language: [],
         theme: [],
         setup: [],
+        registrations: {},
     };
 
     constructor(context: ExtensionContext, workspaceFolder: WorkspaceFolder) {
@@ -41,10 +43,39 @@ export default class Indexer {
         //@ts-ignore
         this.magentoRoot.then(magentoRoot => {
             if (magentoRoot) {
-                // only watch for changes if this folder contains magento
-                this.watch();
+                output.log('Found Magento root at', magentoRoot.fsPath);
+                output.log(' - Modules:', this.paths.module.length);
+                output.log(' - Themes:', this.paths.theme.length);
+            } else {
+                output.log(`No Magento root in '${workspaceFolder.name}' workspace folder (${workspaceFolder.uri.fsPath})`);
             }
         });
+    }
+
+    public destroy() {
+        this.context.workspaceState.update('indexer_'+this.workspaceFolder.uri.fsPath, undefined);
+        this.dispose();
+    }
+
+    public async save() {
+        this.context.workspaceState.update('indexer_'+this.workspaceFolder.uri.fsPath, await this.toJSON());
+    }
+
+    public load(): boolean {
+        const savedData: { paths:RegistrationData, magentoRoot: Uri } | undefined = this.context.workspaceState.get('indexer_'+this.workspaceFolder.uri.fsPath);
+        if (savedData) {
+            this.paths = savedData.paths;
+            this.magentoRoot = Promise.resolve(savedData.magentoRoot);
+            return true;
+        }
+        return false;
+    }
+
+    public async toJSON(): Promise<any> {
+        return {
+            magentoRoot: await this.magentoRoot,
+            paths: this.paths,
+        };
     }
 
     public dispose() {
@@ -76,7 +107,11 @@ export default class Indexer {
             language: [],
             theme: [],
             setup: [],
+            registrations: {},
         };
+
+        // load saved index and magentoRoot
+        this.load();
 
         // absolute path
         if (this.magentoRootConfig.trim()) {
@@ -94,6 +129,7 @@ export default class Indexer {
             }
             magentoRoot = Uri.file(magentoRootConfig);
         } else {
+            // autodetect magento root if it's not loaded
             const env = await workspace.findFiles(new RelativePattern(this.workspaceFolder, '**/app/etc/env.php'), '**/{tests,vendor}/**', 1);
             if (env.length > 0) {
                 magentoRoot = magento.appendUri(env[0], '..', '..', '..');
@@ -107,6 +143,12 @@ export default class Indexer {
         registrations.onProgress(progress => status.text = statusText+Math.round(progress*100)+'%');
         await registrations;
         status.dispose();
+
+        // save index data
+        this.save();
+        // only watch for changes if this folder contains magento
+        this.watch();
+
         return magentoRoot;
     }
 
@@ -121,10 +163,19 @@ export default class Indexer {
     }
 
     async register(file: Uri): Promise<undefined> {
+        const stats = fs.statSync(file.fsPath);
+
+        if (this.paths.registrations[file.fsPath] && this.paths.registrations[file.fsPath] === stats.mtimeMs) {
+            // skip this registration.php because we already have it in index
+            return;
+        }
+
         const commandLine =  this.php + ' ' + path.join(this.context.extensionPath,'php', 'ComponentRegistrar.php') + ' ' + file.fsPath;
         try {
             let { stdout, stderr } = await magento.exec(commandLine, {});
             const paths = JSON.parse(stdout);
+            // remove old entries from index
+            this.removeFromIndex(path.dirname(file.fsPath)+path.sep);
             if (paths) {
                 this.paths.module.push(...await this.indexModule(paths.module));
                 this.paths.theme.push(...await this.indexTheme(paths.theme));
@@ -135,6 +186,7 @@ export default class Indexer {
             }
         } catch(e) {
         }
+        this.paths.registrations[file.fsPath] = stats.mtimeMs;
         return;
     }
 
@@ -143,6 +195,7 @@ export default class Indexer {
         for(let componentName in registrations) {
             let extensionUri = Uri.file(registrations[componentName]);
             let extensionNamespace = componentName.split('_').join('\\')+'\\';
+            // TODO handle extensions without composer.json (in /app/code ?)
             try {
                 const composerJson = JSON.parse(await magento.readFile(magento.appendUri(extensionUri, 'composer.json')));
                 for(let namespace in composerJson.autoload['psr-4']) {
@@ -217,18 +270,26 @@ export default class Indexer {
         return components;
     }
 
+    removeFromIndex(path: string): void {
+        _.remove(this.paths.module, extension => extension.extensionFolder.startsWith(path));
+        _.remove(this.paths.theme, extension => extension.extensionFolder.startsWith(path));
+        for(let registrationPath in this.paths.registrations) {
+            if (registrationPath.startsWith(path)) {
+                delete this.paths.registrations[registrationPath];
+            }
+        }
+    }
+
     async watch() {
         let magentoRoot = (await this.magentoRoot)!.fsPath;
         let registrationWatcher = workspace.createFileSystemWatcher(new RelativePattern(magentoRoot, '{app,vendor}/**/registration.php'));
         registrationWatcher.onDidDelete(file => {
             output.debug('FileSystemWatcher: Deleted file', file.fsPath);
-            this.paths.module = this.paths.module.filter(extension => !extension.extensionFolder.startsWith(path.dirname(file.fsPath)+path.sep));
-            this.paths.theme = this.paths.theme.filter(extension => !extension.extensionFolder.startsWith(path.dirname(file.fsPath)+path.sep));
+            this.removeFromIndex(path.dirname(file.fsPath)+path.sep);
         });
         registrationWatcher.onDidChange(async file => {
             output.debug('FileSystemWatcher: Changed file', file.fsPath);
-            this.paths.module = this.paths.module.filter(extension => !extension.extensionFolder.startsWith(path.dirname(file.fsPath)+path.sep));
-            this.paths.theme = this.paths.theme.filter(extension => !extension.extensionFolder.startsWith(path.dirname(file.fsPath)+path.sep));
+            this.removeFromIndex(path.dirname(file.fsPath)+path.sep);
             await this.register(file);
         });
         registrationWatcher.onDidCreate(async file => {
@@ -239,8 +300,7 @@ export default class Indexer {
         let everythingWatcher = workspace.createFileSystemWatcher(new RelativePattern(magentoRoot, '{app,vendor}/**'));
         everythingWatcher.onDidDelete(file => {
             output.debug('FileSystemWatcher: Deleted', file.fsPath);
-            this.paths.module = this.paths.module.filter(extension => !extension.extensionFolder.startsWith(file.fsPath));
-            this.paths.theme = this.paths.theme.filter(extension => !extension.extensionFolder.startsWith(file.fsPath));
+            this.removeFromIndex(file.fsPath);
         });
         everythingWatcher.onDidCreate(async file => {
             if (fs.statSync(file.fsPath).isDirectory()) {

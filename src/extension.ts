@@ -94,21 +94,27 @@ export function activate(context: vscode.ExtensionContext) {
                 context.subscriptions.push(vscode.tasks.registerTaskProvider(MagentoTaskProvider.MagentoScriptType, new MagentoTaskProvider(workspaceFolder)));
                 try {
                     magento.indexer[workspaceFolder.uri.fsPath] = new Indexer(context, workspaceFolder);
-                    magento.indexer[workspaceFolder.uri.fsPath].magentoRoot.then(magentoRoot => {
-                        if (magentoRoot) {
-                            output.log('Found Magento root at', magentoRoot.fsPath);
-                            output.log(' - Modules:', magento.indexer[workspaceFolder.uri.fsPath].paths.module.length);
-                            output.log(' - Themes:', magento.indexer[workspaceFolder.uri.fsPath].paths.theme.length);
-
-                        } else {
-                            output.log(`No Magento root in '${workspaceFolder.name}' workspace folder (${workspaceFolder.uri.fsPath})`);
-                        }
-                    });
                 } catch(e) {
                     vscode.window.showErrorMessage(e.message);
                 }
             }
         }
+
+        // Watching for changes in the list of workspace folders
+        vscode.workspace.onDidChangeWorkspaceFolders(change => {
+            for(let workspaceFolder of change.added) {
+                try {
+                    magento.indexer[workspaceFolder.uri.fsPath] = new Indexer(context, workspaceFolder);
+                } catch(e) {
+                    vscode.window.showErrorMessage(e.message);
+                }
+            }
+            for(let workspaceFolder of change.removed) {
+                output.log(`Deleting index for ${workspaceFolder.name} (${workspaceFolder.uri.fsPath})`);
+                magento.indexer[workspaceFolder.uri.fsPath].destroy();
+                delete magento.indexer[workspaceFolder.uri.fsPath];
+            }
+        });
 
         context.subscriptions.push(vscode.commands.registerCommand('magentowizard.newExtension', async () => {
             const data = await getVendorExtension({ custom: true });
