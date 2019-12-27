@@ -40,6 +40,12 @@
             {
                 "title": "MagentoWizard",
                 "properties": {
+                    "magentoWizard.tasks.provider": {
+                        "type": "boolean",
+                        "default": "true",
+                        "description": "Enable bin/magento commands task provider",
+                        "scope": "resource"
+                    },
                     "magentoWizard.tasks.php": {
                         "type": "string",
                         "default": "php",

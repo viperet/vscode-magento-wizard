@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import magento from '../magento';
 import * as output from '../output';
+import { workspace } from 'vscode';
 
 interface MagentoTaskDefinition extends vscode.TaskDefinition {
     /**
@@ -19,6 +20,7 @@ export class MagentoTaskProvider implements vscode.TaskProvider {
     private tasks: vscode.Task[] | undefined;
     private php: string = 'php';
     private user: string = '';
+    private enabled: boolean = true;
     private config: vscode.WorkspaceConfiguration;
     private folder: string;
     private sharedState: string | undefined;
@@ -27,6 +29,7 @@ export class MagentoTaskProvider implements vscode.TaskProvider {
         this.config = vscode.workspace.getConfiguration('', this.workspaceFolder.uri);
         this.folder = workspaceFolder.uri.fsPath;
         this.readConfig();
+        workspace.onDidChangeConfiguration(change => this.readConfig(change));
     }
 
     public async provideTasks(): Promise<vscode.Task[]> {
@@ -43,6 +46,9 @@ export class MagentoTaskProvider implements vscode.TaskProvider {
     }
 
     private async getTasks(): Promise<vscode.Task[]> {
+        if (!this.enabled) {
+            return [];
+        }
         if (this.tasks !== undefined) {
             return this.tasks;
         }
@@ -52,7 +58,6 @@ export class MagentoTaskProvider implements vscode.TaskProvider {
             // if there is no bin/magento in this workspace folder - return no tasks
             return [];
         }
-        this.readConfig();
         let commandLine = (this.user ? `sudo -u ${this.user} ` : '') + `${this.php} bin/magento --no-ansi`;
         this.tasks = [];
 
@@ -123,9 +128,11 @@ export class MagentoTaskProvider implements vscode.TaskProvider {
         };
         return task;
     }
-    private readConfig() {
-        this.config = vscode.workspace.getConfiguration('', this.workspaceFolder.uri);
-        this.php = this.config.get('magentoWizard.tasks.php') || 'php';
-        this.user = this.config.get('magentoWizard.tasks.user') || '';
+    private readConfig(change?: vscode.ConfigurationChangeEvent) {
+        const config = vscode.workspace.getConfiguration('', this.workspaceFolder.uri);
+        this.php = config.get('magentoWizard.tasks.php') || 'php';
+        this.user = config.get('magentoWizard.tasks.user') || '';
+        
+        this.enabled = config.get('magentoWizard.tasks.provider') || false;
     }
 }
