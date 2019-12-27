@@ -92,7 +92,6 @@ export class MagentoTaskProvider implements vscode.TaskProvider {
                     }
                 });
             } else {
-                // TODO allow to disable task provider for this folder
                 vscode.window.showErrorMessage(`Error running "${commandLine}":\n${err.stdout}`);
             }
             this.tasks = undefined;

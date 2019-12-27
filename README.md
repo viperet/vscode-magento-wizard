@@ -14,7 +14,7 @@ This extension will ease life of the Magento 2 developer by automating some repe
 ![Dependency Injection ](https://github.com/viperet/vscode-magento-wizard/raw/master/images/dependency-injection.gif)
 
 - You can easily add observer for any event using "MagentoWizard: Add Observer" command, MagentoWizard even knows what data is passed to observers for some popular events.
-- Ability to run all bin/magento commands using VSC Run Task command
+- Ability to run all bin/magento commands using VSC Run Task command (Task provider can be disabled in the settings).
 - Generation of [XML Catalog](https://en.wikipedia.org/wiki/XML_catalog) file for Magento 2 XML DTD files. Run `MagentoWizard: Generate XML Catalog` command and extension will create XML Catalog file in the correct format. It will be added to the [XML](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-xml) extension config if that extension is installed.
 
 ### Planned features

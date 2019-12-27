@@ -195,7 +195,6 @@ export default class Indexer {
         for(let componentName in registrations) {
             let extensionUri = Uri.file(registrations[componentName]);
             let extensionNamespace = componentName.split('_').join('\\')+'\\';
-            // TODO handle extensions without composer.json (in /app/code ?)
             const composerJsonUri = magento.appendUri(extensionUri, 'composer.json');
             if (await magento.fileExists(composerJsonUri)) {
                 try {
