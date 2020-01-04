@@ -34,7 +34,17 @@ This extension will ease life of the Magento 2 developer by automating some repe
 - [ ] Go to definition function for class and template referrences in *.xml files
 - [ ] More templates
 
+## Contributions
+
+This project is open for all kinds of contributions - new templates, new ideas, bug reports, new features, etc.
+If you found bug or want to request a new feature - just create new issue on github. If you want to add new feature yourself -
+fork this repo and create pull request.
+
 ## Release Notes
+
+### 1.3.2
+
+Added option to select the existing XML file to convert when using the 'Generate Catalog' command.
 
 ### 1.3.0
 
