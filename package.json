@@ -12,12 +12,12 @@
     "displayName": "MagentoWizard",
     "description": "Will ease life of the Magento 2 developer by automating some repeating tasks, like injecting dependency",
     "version": "1.3.1",
-    "extensionKind": "workspace",
+    "extensionKind": ["workspace"],
     "preview": true,
     "category": "Other",
     "icon": "images/magento-wizard-logo.png",
     "engines": {
-        "vscode": "^1.38.0"
+        "vscode": "^1.40.0"
     },
     "categories": [
         "Other"
@@ -128,7 +128,7 @@
         "@types/node": "^10.12.21",
         "@types/vscode": "^1.38.0",
         "glob": "^7.1.4",
-        "handlebars": "^4.3.1",
+        "handlebars": "^4.5.3",
         "mocha": "^6.1.4",
         "ts-loader": "^6.1.2",
         "tslint": "^5.12.1",
