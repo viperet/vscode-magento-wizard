@@ -165,6 +165,7 @@ export default class Indexer {
         output.debug('Found files registration files:', files.map(file => file.fsPath).join(', '));
         await Promise.all(files.map(file => this.register(file)));
         this.paths.module = _.uniqBy(this.paths.module, extension => extension.extensionFolder);
+        this.paths.library = _.uniqBy(this.paths.library, extension => extension.extensionFolder);
         this.paths.theme = _.uniqBy(this.paths.theme, extension => extension.extensionFolder);
         return;
     }
@@ -185,6 +186,7 @@ export default class Indexer {
             this.removeFromIndex(path.dirname(file.fsPath)+path.sep);
             if (paths) {
                 this.paths.module.push(...await this.indexModule(paths.module));
+                this.paths.library.push(...await this.indexModule(paths.library));
                 this.paths.theme.push(...await this.indexTheme(paths.theme));
             }
             if (stderr) {
@@ -336,13 +338,21 @@ export default class Indexer {
     }
 
     findByClassName(className: string): UriData | undefined {
+        let results: UriData[] = [];
         let classNameNormalized = className.split('\\').filter(Boolean).join('\\')+'\\';
         for(let extensions of [this.paths.module, this.paths.library, this.paths.setup]) {
             for(let module of extensions) {
                 if (classNameNormalized.startsWith(module.namespace)) {
-                    return Object.assign({},  module);
+                    results.push(Object.assign({},  module));
                 }
             }
+        }
+        if (results.length > 0) {
+            // sort longer namespaces first
+            results.sort((a, b) => {
+                return b.namespace.length - a.namespace.length;
+            });
+            return results[0];
         }
         return undefined;
     }
