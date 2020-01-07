@@ -62,19 +62,20 @@ export default class Indexer {
     }
 
     public load(): boolean {
-        const savedData: { paths:RegistrationData, magentoRoot: Uri } | undefined = this.context.workspaceState.get('indexer_'+this.workspaceFolder.uri.fsPath);
-        if (savedData) {
-            // restore Uri
-            for(let extensions of [savedData.paths.module, savedData.paths.library, savedData.paths.setup]) {
-                for(let module of extensions) {
-                    module.extensionUri = Uri.file(module.extensionUri.path);
-                }
-            }
-            this.paths = savedData.paths;
-            this.magentoRoot = Promise.resolve(savedData.magentoRoot);
-            return true;
-        }
         return false;
+        // const savedData: { paths:RegistrationData, magentoRoot: Uri } | undefined = this.context.workspaceState.get('indexer_'+this.workspaceFolder.uri.fsPath);
+        // if (savedData) {
+        //     // restore Uri
+        //     for(let extensions of [savedData.paths.module, savedData.paths.library, savedData.paths.setup]) {
+        //         for(let module of extensions) {
+        //             module.extensionUri = Uri.file(module.extensionUri.path);
+        //         }
+        //     }
+        //     this.paths = savedData.paths;
+        //     this.magentoRoot = Promise.resolve(savedData.magentoRoot);
+        //     return true;
+        // }
+        // return false;
     }
 
     public async toJSON(): Promise<any> {
@@ -327,7 +328,7 @@ export default class Indexer {
         for(let extensions of [this.paths.module, this.paths.theme, this.paths.library, this.paths.setup, this.paths.language]) {
             for(let extension of extensions) {
                 if (path.fsPath.startsWith(extension.extensionFolder)) {
-                    return extension;
+                    return Object.assign({}, extension);
                 }
             }
         }
@@ -339,7 +340,7 @@ export default class Indexer {
         for(let extensions of [this.paths.module, this.paths.library, this.paths.setup]) {
             for(let module of extensions) {
                 if (classNameNormalized.startsWith(module.namespace)) {
-                    return module;
+                    return Object.assign({},  module);
                 }
             }
         }
@@ -350,7 +351,7 @@ export default class Indexer {
         for(let extensions of [this.paths.module, this.paths.library, this.paths.setup]) {
             for(let module of extensions) {
                 if (module.vendor === vendor && module.extension === extension) {
-                    return module;
+                    return Object.assign({}, module);
                 }
             }
         }
