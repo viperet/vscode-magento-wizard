@@ -62,20 +62,19 @@ export default class Indexer {
     }
 
     public load(): boolean {
+        const savedData: { paths:RegistrationData, magentoRoot: Uri } | undefined = this.context.workspaceState.get('indexer_'+this.workspaceFolder.uri.fsPath);
+        if (savedData) {
+            // restore Uri
+            for(let extensions of [savedData.paths.module, savedData.paths.library, savedData.paths.setup]) {
+                for(let module of extensions) {
+                    module.extensionUri = Uri.file(module.extensionUri.path);
+                }
+            }
+            this.paths = savedData.paths;
+            this.magentoRoot = Promise.resolve(savedData.magentoRoot);
+            return true;
+        }
         return false;
-        // const savedData: { paths:RegistrationData, magentoRoot: Uri } | undefined = this.context.workspaceState.get('indexer_'+this.workspaceFolder.uri.fsPath);
-        // if (savedData) {
-        //     // restore Uri
-        //     for(let extensions of [savedData.paths.module, savedData.paths.library, savedData.paths.setup]) {
-        //         for(let module of extensions) {
-        //             module.extensionUri = Uri.file(module.extensionUri.path);
-        //         }
-        //     }
-        //     this.paths = savedData.paths;
-        //     this.magentoRoot = Promise.resolve(savedData.magentoRoot);
-        //     return true;
-        // }
-        // return false;
     }
 
     public async toJSON(): Promise<any> {
