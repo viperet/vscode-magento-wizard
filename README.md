@@ -14,8 +14,9 @@ This extension will ease life of the Magento 2 developer by automating some repe
 ![Dependency Injection ](https://github.com/viperet/vscode-magento-wizard/raw/master/images/dependency-injection.gif)
 
 - You can easily add observer for any event using "MagentoWizard: Add Observer" command, MagentoWizard even knows what data is passed to observers for some popular events.
-- Ability to run all bin/magento commands using VSC Run Task command
+- Ability to run all bin/magento commands using VSC Run Task command (Task provider can be disabled in the settings).
 - Generation of [XML Catalog](https://en.wikipedia.org/wiki/XML_catalog) file for Magento 2 XML DTD files. Run `MagentoWizard: Generate XML Catalog` command and extension will create XML Catalog file in the correct format. It will be added to the [XML](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-xml) extension config if that extension is installed.
+- `Go to Definition` function for class names and template names in XML Layouts.
 
 ### Planned features
 
@@ -31,7 +32,7 @@ This extension will ease life of the Magento 2 developer by automating some repe
 - [ ] Adding custom attribute to products, categories, orders, customers, etc.
 - [x] Add Magento tasks like setup:upgrade, cache:clean to VSC tasks
 - [ ] Watch for changes in *.xml, *.phtml, *.php and clear corresponding cache type (like [magento-cache-clean](https://github.com/mage2tv/magento-cache-clean) extension)
-- [ ] Go to definition function for class and template referrences in *.xml files
+- [x] Go to definition function for class and template referrences in *.xml files
 - [ ] More templates
 
 ## Contributions
@@ -41,6 +42,13 @@ If you found bug or want to request a new feature - just create new issue on git
 fork this repo and create pull request.
 
 ## Release Notes
+
+### 2.0.0
+
+Big update of the inner design of extension. Now MagentoWizard indexes all extentions, themes, libraries in the workspace after the launch
+and keeps index up to date by watching changes in the files. That allows to support autodetection of the Magento root in the workspace, also
+Magento Wizard now better supports many Magento roots in different workspace folders, also you can override location of the Magento root in settings.
+Also support for `Go to Defintion` function for class names and templates in XML layout files was added.
 
 ### 1.3.2
 

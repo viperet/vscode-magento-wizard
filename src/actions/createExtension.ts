@@ -1,4 +1,4 @@
-import { workspace, Uri } from 'vscode';
+import { workspace, Uri, WorkspaceFolder } from 'vscode';
 import magento  from '../magento';
 const fs = workspace.fs;
 
@@ -11,7 +11,7 @@ const fs = workspace.fs;
  * @memberof Magento
  */
 export default async function (vendor: string, extension: string): Promise<Uri> {
-    const codeUri = magento.getAppCodeUri();
+    const codeUri = await magento.getAppCodeUri();
     const extensionUri = magento.appendUri(codeUri, vendor, extension);
     const registrationPhpUri = magento.appendUri(extensionUri, 'registration.php');
     const composerJsonUri = magento.appendUri(extensionUri, 'composer.json');
@@ -40,5 +40,6 @@ export default async function (vendor: string, extension: string): Promise<Uri> 
         throw new Error('Error creating extension files');
     }
     await workspace.openTextDocument(moduleXmlUri);
+    magento.indexer[magento.folder.uri.fsPath].register(magento.appendUri(extensionUri, 'registration.php'));
     return extensionUri;
 }

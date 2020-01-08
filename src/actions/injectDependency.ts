@@ -22,6 +22,9 @@ export default async function (textEditor: TextEditor, className: string, varNam
     varName = varName.startsWith('$') ? varName.substring(1) : varName;
     let document = textEditor.document;
     let data = await magento.getUriData(document.uri);
+    if (!data) {
+        throw new Error('Not a Magento 2 extension file');
+    }
     let ast = new Php();
     ast.parseCode(document.getText(), data.name+'.'+data.ext);
     let classNode = ast.findClass(data.name);

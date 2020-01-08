@@ -3,6 +3,12 @@
 		"no-string-throw": true,
 		"no-unused-expression": true,
 		"no-duplicate-variable": true,
+		"no-conditional-assignment": true,
+		"no-async-without-await": true,
+		"no-for-in-array": true,
+		"no-promise-as-boolean": true,
+		"no-return-await": true,
+		"deprecation": true,
 		"curly": true,
 		"class-name": true,
 		"semicolon": [
