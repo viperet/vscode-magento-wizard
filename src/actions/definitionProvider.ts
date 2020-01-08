@@ -1,6 +1,7 @@
 import magento, { ExtensionInfo, UriData } from '../magento';
 import { workspace, DefinitionProvider, TextDocument, Position, CancellationToken, ProviderResult, Definition, DefinitionLink, Uri, Range, window} from 'vscode';
 
+// FIXME no definition for "Itbsllc_ProductDesigner::order/view/custom_design_preview.phtml"
 export interface ClassDefinitionLink extends DefinitionLink {
     resolved: boolean;
     targetName: string;

@@ -43,6 +43,13 @@ fork this repo and create pull request.
 
 ## Release Notes
 
+### 2.0.0
+
+Big update of the inner design of extension. Now MagentoWizard indexes all extentions, themes, libraries in the workspace after the launch
+and keeps index up to date by watching changes in the files. That allows to support autodetection of the Magento root in the workspace, also
+Magento Wizard now better supports many Magento roots in different workspace folders, also you can override location of the Magento root in settings.
+Also support for `Go to Defintion` function for class names and templates in XML layout files was added.
+
 ### 1.3.2
 
 Added option to select the existing XML file to convert when using the 'Generate Catalog' command.
