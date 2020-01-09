@@ -65,7 +65,7 @@ export default class Indexer {
         const savedData: { paths:RegistrationData, magentoRoot: Uri } | undefined = this.context.workspaceState.get('indexer_'+this.workspaceFolder.uri.fsPath);
         if (savedData) {
             // restore Uri
-            for(let extensions of [savedData.paths.module, savedData.paths.library, savedData.paths.setup]) {
+            for(let extensions of [savedData.paths.module, savedData.paths.library, savedData.paths.setup, savedData.paths.theme, savedData.paths.language]) {
                 for(let module of extensions) {
                     module.extensionUri = Uri.file(module.extensionUri.path);
                 }
