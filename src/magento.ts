@@ -154,9 +154,14 @@ class Magento {
         } else {
             return;
         }
-        data.namespace += path.dirname(uri.fsPath).slice(data.extensionFolder.length).split(path.sep).join('\\');
+        const pathComponents = path.dirname(uri.fsPath).slice(data.extensionFolder.length).split(path.sep);
+        data.namespace += pathComponents.join('\\');
         data.ext = path.extname(uri.fsPath).slice(1);
         data.name = path.basename(uri.fsPath, path.extname(uri.fsPath));
+        data.type = pathComponents.length > 0 ? pathComponents[0] : '';
+        if (data.type === 'view') {
+            data.area = pathComponents.length > 1 ? pathComponents[1] : '';
+        }
         return data;
     }
 
@@ -557,15 +562,11 @@ class Magento {
         const matches = viewFile.trim().match(fileReferenceRe);
         if (matches && matches.groups) {
             let extensionUri: Uri;
-            let extension;
+            let extension: UriData | undefined;
 
             if (data.kind === ExtentionKind.Module) {
                 // search for view file in the module
-                for(let module of this.indexer[this.folder.uri.fsPath].paths.module) {
-                    if (module.vendor === matches.groups.vendor && module.extension === matches.groups.extension) {
-                        extension =  module;
-                    }
-                }
+                extension = this.getIndexer().findByVendorExtension(matches.groups.vendor, matches.groups.extension);
                 if (!extension) {
                     return undefined;
                 }
@@ -588,10 +589,11 @@ class Magento {
                         return viewFileUri;
                     }
                     // if not found - try to look into 'base' folder
-                    viewFileUri = this.appendUri(extension.extensionUri, 'view', 'base', fileType, matches.groups.path + '.' + matches.groups.ext);
-                    if (await this.fileExists(viewFileUri)) {
-                        return viewFileUri;
+                    const viewFileBaseUri = this.appendUri(extension.extensionUri, 'view', 'base', fileType, matches.groups.path + '.' + matches.groups.ext);
+                    if (await this.fileExists(viewFileBaseUri)) {
+                        return viewFileBaseUri;
                     }
+                    return viewFileUri;
                 }
             } else if (data.kind === ExtentionKind.Theme) {
                 extensionUri = data.extensionUri;
