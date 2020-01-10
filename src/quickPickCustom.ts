@@ -81,7 +81,7 @@ export default function createQuickPickCustom(
                         ))
                     );
                     quickPick.items = items;
-                    if (data.done) {
+                    if (data.done || data.value.length === 0) {
                         quickPick.busy = false;
                     } else {
                         processChunk(chunk);
@@ -90,6 +90,21 @@ export default function createQuickPickCustom(
             }
             quickPick.busy = true;
             processChunk(values as AsyncIterableIterator<string[]>);
+            quickPick.onDidChangeValue(value => {
+                const chunk = values as AsyncIterableIterator<string[]>;
+                quickPick.busy = true;
+                chunk.next(value as any).then(data => {
+                    items.push(...data.value.map((item: string) => ({ label: item })));
+                    // remove duplicates
+                    items = items.filter((item, index, self) => 
+                        index === self.findIndex(t => (
+                            t.label === item.label
+                        ))
+                    );
+                    quickPick.items = items;
+                    quickPick.busy = false;
+                });
+            });            
         }
     });
     return selection;

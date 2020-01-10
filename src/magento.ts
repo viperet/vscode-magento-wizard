@@ -55,6 +55,7 @@ class Magento {
 
     private uriDataCache: NodeCache;
     private composerCache: NodeCache;
+    private classesCache: NodeCache;
 
     public indexer: { [folder: string]: Indexer } = {};
 
@@ -68,6 +69,7 @@ class Magento {
         this.decoder = decoder.decode.bind(decoder);
         this.uriDataCache = new NodeCache({ useClones: false, stdTTL: 60, checkperiod: 60 });
         this.composerCache = new NodeCache({ useClones: false, stdTTL: 60, checkperiod: 60 });
+        this.classesCache = new NodeCache({ useClones: false, stdTTL: 60, checkperiod: 60 });
     }
 
     getIndexer(): Indexer {
@@ -291,29 +293,47 @@ class Magento {
             return [];
         }
         // search for classes in the extension folder
-        return this.searchClasses(data.extensionFolder);
+        yield this.searchClasses(data.extensionFolder);
 
-        // search for classes in /app/code
-        // return this.searchClasses(this.getAppCodeUri().fsPath);
-   }
+        let keyword: string = (yield []) as any;
+        while(1) {
+            let classes: string[] = [];
+            if (keyword.length >= 3) {
+                for(let extensions of [this.getIndexer().paths.module, this.getIndexer().paths.library]) {
+                    for(let module of extensions) {
+                        if (('\\'+module.namespace).includes(keyword)) {
+                            classes.push.apply(classes, await this.searchClasses(module.extensionFolder));
+                        }
+                    }
+                }
+            }
+            keyword = (yield classes) as any;
+        }
+        // never returns
+    }
 
     async searchClasses(path: string): Promise<string[]> {
-        let pattern = new RelativePattern(
-                path,
-                '**/*.php'
+        let classes: string[] | undefined = this.classesCache.get(path);
+
+        if (classes === undefined) {
+            classes = [];
+            let pattern = new RelativePattern(
+                    path,
+                    '**/*.php'
+                );
+            let files = await workspace.findFiles(
+                pattern,
+                '**/registration.php'
             );
-        let files = await workspace.findFiles(
-            pattern,
-            '**/registration.php'
-        );
-        let extClasses: string[]  = [];
-        for(let uri of files) {
-            let data = await this.getUriData(uri);
-            if (data && data.vendor && data.extension && data.namespace && data.name) {
-                extClasses.push(`\\${data.namespace}\\${data.name}`);
+            for(let uri of files) {
+                let data = await this.getUriData(uri);
+                if (data && data.vendor && data.extension && data.namespace && data.name) {
+                    classes.push(`\\${data.namespace}\\${data.name}`);
+                }
             }
+            this.classesCache.set(path, classes);
         }
-        return extClasses;
+        return classes;
     }
 
     /**
