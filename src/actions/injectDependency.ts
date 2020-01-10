@@ -41,6 +41,7 @@ export default async function (textEditor: TextEditor, className: string, varNam
     }
 
     // Adding argument to the constructor
+    // TODO incorrectly added argument when constructor already have one argument in on the same line
     let previousArg: Parser.Parameter | undefined;
     if (constructorNode.arguments.length > 0) {
         // there are some arguments already

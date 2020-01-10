@@ -14,9 +14,11 @@ const templates: { [key: string]: string } = {
     '\/etc\/(adminhtml\/)?catalog_attributes\.xml$': require('../templates/etc/catalog_attributes.xml'),
     '\/etc\/(adminhtml\/)?menu\.xml$': require('../templates/etc/menu.xml'),
     '\/view\/(frontend|adminhtml)\/layout\/.*\.xml$': require('../templates/layout.xml'),
-
     '\/Block\/.*\.php$': require('../templates/block.php'),
+    '\/Controller\/Adminhtml\/.*\.php$': require('../templates/controller_backend.php'),
     '\/Controller\/.*\.php$': require('../templates/controller.php'),
+    '\/Model\/ResourceModel\/.*\/Collection\.php$': require('../templates/resource_collection_model.php'),
+    '\/Model\/ResourceModel\/.*\.php$': require('../templates/resource_model.php'),
     '\/Model\/.*\.php$': require('../templates/model.php'),
     '\/Observer\/.*\.php$': require('../templates/observer.php'),
     '\/Console\/.*\.php$': require('../templates/command.php'),

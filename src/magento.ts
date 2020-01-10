@@ -224,6 +224,10 @@ class Magento {
             // File is not in the Magento 2 extension
             return;
         }
+        let modelMatch = data.namespace.match(/\\ResourceModel\\(?<modelName>.+)$/);
+        if (modelMatch) {
+            Object.assign(data, { modelName: modelMatch.groups!.modelName });
+        }
         const templates = require('./templates').default;
         for(let reg in templates) {
             const regexp = new RegExp(reg);
