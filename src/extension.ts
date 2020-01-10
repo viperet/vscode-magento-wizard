@@ -145,8 +145,6 @@ export function activate(context: vscode.ExtensionContext) {
                     magento.folder = folder;
                 }
                 if (textEditor) {
-                    // TODO Allow custom class name not from the list
-                    // TODO Search for classes as user types namespace name
                     let className = await createQuickPickCustom(magento.getClasses(data), { custom: true, step: 1, totalSteps: 2, title: 'Please select class or interface to inject' });
                     if (className) {
                         var varName = await vscode.window.showInputBox({

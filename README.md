@@ -10,6 +10,7 @@ This extension will ease life of the Magento 2 developer by automating some repe
 ![Creating new extension](https://github.com/viperet/vscode-magento-wizard/raw/master/images/create_extension.gif)
 
 - When editing class file you can inject new dependency by pressing `F1` and using `MagentoWizard: Inject Dependency` command.
+Start typing `\Vendor\ExtensionName\` to get list of classes from that extension.
 
 ![Dependency Injection ](https://github.com/viperet/vscode-magento-wizard/raw/master/images/dependency-injection.gif)
 
