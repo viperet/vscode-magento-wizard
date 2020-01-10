@@ -221,7 +221,7 @@ export function activate(context: vscode.ExtensionContext) {
                 let classFile = await magento.getClassFile(extensionData, className);
 
                 let methods: ClassMethod[] = [];
-                if (classFile) {
+                if (classFile && await magento.fileExists(classFile)) {
                     methods = await magento.getClassMethods(classFile);
                 }
                 let methodsNames: string[] = [];
