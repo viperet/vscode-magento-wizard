@@ -333,6 +333,10 @@ class Magento {
                 let data = await this.getUriData(uri);
                 if (data && data.vendor && data.extension && data.namespace && data.name) {
                     classes.push(`\\${data.namespace}\\${data.name}`);
+                    if (data.type === 'Model' && !data.namespace.includes('\\ResourceModel\\')) {
+                        // Also add corresponding Factory class
+                        classes.push(`\\${data.namespace}\\${data.name}Factory`);
+                    }
                 }
             }
             this.classesCache.set(path, classes);
