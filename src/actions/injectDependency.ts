@@ -53,10 +53,25 @@ export default async function (textEditor: TextEditor, className: string, varNam
             }
         }
 
-        if (i === constructorNode!.arguments.length-1) {
+        let indentation = magento.indentCode(textEditor, 2);
+        if (i === -1) {
+            // adding before first argument
+            let constructorCode = document.getText(new Range(
+                constructorNode.loc.start.line-1, constructorNode.loc.start.column,
+                constructorNode.loc.end.line-1, constructorNode.loc.end.column
+            ));
+            let constructorOffset = document.offsetAt(new Position(constructorNode.loc.start.line-1, constructorNode.loc.start.column));
+            let argsOffset = constructorCode.indexOf('(');
+            let argsPosition = document.positionAt(constructorOffset + argsOffset + 1);
+            inserts.push({
+                line: argsPosition.line,
+                column: argsPosition.character,
+                text: `\n${indentation}${className} $${varName},\n${indentation}`,
+            });
+        } else if (i === constructorNode!.arguments.length-1) {
             // adding after the last argument
             let arg = previousArg = constructorNode!.arguments[i];
-            let indentation = document.getText(new Range(arg.loc.start.line-1, 0, arg.loc.start.line-1, arg.loc.start.column));
+            // let indentation = document.getText(new Range(arg.loc.start.line-1, 0, arg.loc.start.line-1, arg.loc.start.column));
             inserts.push({
                 line: arg.loc.end.line-1,
                 column: arg.loc.end.column,
@@ -66,7 +81,7 @@ export default async function (textEditor: TextEditor, className: string, varNam
             // adding before some argument
             previousArg = constructorNode!.arguments[i];
             let arg = constructorNode!.arguments[i+1];
-            let indentation = document.getText(new Range(arg.loc.start.line-1, 0, arg.loc.start.line-1, arg.loc.start.column));
+            // let indentation = document.getText(new Range(arg.loc.start.line-1, 0, arg.loc.start.line-1, arg.loc.start.column));
             inserts.push({
                 line: arg.loc.start.line-1,
                 column: 0,
