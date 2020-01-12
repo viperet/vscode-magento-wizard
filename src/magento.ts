@@ -73,7 +73,7 @@ class Magento {
     }
 
     getIndexer(): Indexer {
-        return this.getIndexer();
+        return this.indexer[this.folder.uri.fsPath];
     }
 
     /**
