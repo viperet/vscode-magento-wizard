@@ -30,6 +30,7 @@
         "onCommand:magentowizard.addObserver",
         "onCommand:magentowizard.generateCatalog",
         "onCommand:magentowizard.addPlugin",
+        "onCommand:magentowizard.addCRUD",
         "workspaceContains:**/app/etc/env.php",
         "workspaceContains:**/app/etc/di.xml",
         "workspaceContains:**/bin/magento"
@@ -83,6 +84,10 @@
             {
                 "command": "magentowizard.addPlugin",
                 "title": "MagentoWizard: Add Plugin"
+            },
+            {
+                "command": "magentowizard.addCRUD",
+                "title": "MagentoWizard: Add CRUD Model/ResourceModel/Collection"
             },
             {
                 "command": "magentowizard.generateCatalog",

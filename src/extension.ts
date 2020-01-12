@@ -6,12 +6,14 @@ import createExtension from './actions/createExtension';
 import injectDependency from './actions/injectDependency';
 import addObserver from './actions/addObserver';
 import addPlugin from './actions/addPlugin';
+import addCRUD from './actions/addCRUD';
 import generateCatalog from './actions/generateCatalog';
 import Php, { ClassMethod, MethodVisibility } from './php';
 import { MagentoTaskProvider } from './actions/MagentoTaskProvider';
 import { definitionProvider } from './actions/definitionProvider';
 import Indexer from './indexer';
 import * as output from './output';
+import * as Case from 'case';
 
 export function activate(context: vscode.ExtensionContext) {
 
@@ -266,6 +268,46 @@ export function activate(context: vscode.ExtensionContext) {
                 if (!pluginName) { return; }
 
                 await addPlugin(extensionData, className, method, pluginType, pluginName);
+            } catch (e) {
+                vscode.window.showErrorMessage(e.message);
+            }
+        }));
+
+        context.subscriptions.push(vscode.commands.registerCommand('magentowizard.addCRUD', async () => {
+            let textEditor = vscode.window.activeTextEditor;
+            let step = 1, totalSteps = 2;
+            try {
+                let extensionData;
+                if (textEditor) {
+                    try {
+                        extensionData = await magento.getUriData(textEditor.document.uri);
+                    } catch {}
+                }
+                if (!extensionData || !extensionData.vendor || !extensionData.extension) {
+                    totalSteps = 4;
+                    step = 3;
+                    extensionData = await getVendorExtension({ custom: false, totalSteps });
+                }
+                if (!extensionData || !extensionData.vendor || !extensionData.extension) {
+                    return;
+                }
+                //let modelName = await createQuickPickCustom([], { custom: true, step, totalSteps, title: 'Please enter Model class name' });
+                let modelName = await vscode.window.showInputBox({
+                    prompt: `Please enter Model class name (${step}/${totalSteps})`,
+                    value: '',
+                    validateInput: value => !value.match(/^[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff\/]*[a-zA-Z0-9_\x7f-\xff]$/) ? 'Incorrect class name' : '',
+                });
+                if (!modelName) { return; }
+                step++;
+                //let tableName = await createQuickPickCustom([], { custom: true, step, totalSteps, title: 'Please enter DB table name' });
+                let tableName = await vscode.window.showInputBox({
+                    prompt: `Please enter DB table name (${step}/${totalSteps})`,
+                    value: Case.snake(modelName),
+                    validateInput: value => !value.match(/^[A-Za-z][A-Za-z0-9_]*$/) ? 'Incorrect DB table name' : '',
+                });
+                if (!tableName) { return; }
+
+                await addCRUD(extensionData, modelName, tableName);
             } catch (e) {
                 vscode.window.showErrorMessage(e.message);
             }

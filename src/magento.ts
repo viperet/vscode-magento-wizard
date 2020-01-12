@@ -73,7 +73,7 @@ class Magento {
     }
 
     getIndexer(): Indexer {
-        return this.indexer[this.folder.uri.fsPath];
+        return this.getIndexer();
     }
 
     /**
@@ -88,6 +88,18 @@ class Magento {
         return uri.with({ path: path.join(uri.path, ...args) });
     }
 
+    async getMagentoRootUri(): Promise<Uri> {
+        const indexer = this.getIndexer();
+        if (!indexer) {
+            throw new Error('No Magento in this workspace folder');
+        }
+        let magentoRoot = await indexer.magentoRoot;
+        if (!magentoRoot) {
+            throw new Error('No Magento in this workspace folder');
+        }
+        return magentoRoot;
+    }
+
     /**
      * Returns Uri of the Magento 2 /app/code folder
      *
@@ -95,19 +107,13 @@ class Magento {
      * @memberof Magento
      */
     async getAppCodeUri(): Promise<Uri> {
-        if (!this.indexer[this.folder.uri.fsPath]) {
-            throw new Error('No Magento in this workspace folder');
-        }
-        let magentoRoot = await this.indexer[this.folder.uri.fsPath].magentoRoot;
-        if (!magentoRoot) {
-            throw new Error('No Magento in this workspace folder');
-        }
+        let magentoRoot = await this.getMagentoRootUri();
         let uri = this.appendUri(magentoRoot, 'app', 'code');
         try {
             fs.stat(uri);
             return uri;
         } catch {
-            throw new Error('There is no Magento folders in this workspace folder');
+            throw new Error('There is no Magento app/code/ folder in this workspace folder');
         }
     }
 
@@ -118,19 +124,13 @@ class Magento {
      * @memberof Magento
      */
     async getAppDesignUri(): Promise<Uri> {
-        if (!this.indexer[this.folder.uri.fsPath]) {
-            throw new Error('No Magento in this workspace folder');
-        }
-        let magentoRoot = await this.indexer[this.folder.uri.fsPath].magentoRoot;
-        if (!magentoRoot) {
-            throw new Error('No Magento in this workspace folder');
-        }
+        let magentoRoot = await this.getMagentoRootUri();
         let uri = this.appendUri(magentoRoot, 'app', 'design');
         try {
             fs.stat(uri);
             return uri;
         } catch {
-            throw new Error('There is no Magento folders in this workspace folder');
+            throw new Error('There is no Magento app/design folder in this workspace folder');
         }
     }
 
@@ -175,7 +175,7 @@ class Magento {
      */
     async getVendors(): Promise<string[]> {
         let vendors = [];
-        for(let module of this.indexer[this.folder.uri.fsPath].paths.module) {
+        for(let module of this.getIndexer().paths.module) {
             vendors.push(module.vendor);
         }
         // return unique vendors
@@ -192,7 +192,7 @@ class Magento {
     async getExtensions(vendor: string): Promise<string[]> {
 
         let extensions = [];
-        for(let module of this.indexer[this.folder.uri.fsPath].paths.module) {
+        for(let module of this.getIndexer().paths.module) {
             if (module.vendor === vendor) {
                 extensions.push(module.extension);
             }
@@ -239,6 +239,18 @@ class Magento {
                 break;
             }
         }
+    }
+
+    async createWithTemplate(file: Uri, template:CallableFunction, data?: any): Promise<void> {
+        if (!data) {
+            data = {};
+        }
+        data = Object.assign(await this.getUriData(file), data);
+        let templateText: string = template(data);
+        templateText = templateText.replace(/\$\{\d+\:(.*?)\}/g, (_match, variableName): string => {
+            return data[variableName] || variableName;
+        });
+        return this.writeFile(file, templateText);
     }
 
     /**
@@ -492,7 +504,7 @@ class Magento {
      * @memberof Magento
      */
     async getClassFile(extension: ExtensionInfo, className: string): Promise<Uri | undefined> {
-        let module = this.indexer[this.folder.uri.fsPath].findByClassName(className);
+        let module = this.getIndexer().findByClassName(className);
         if (module) {
             return this.appendUri(module.extensionUri, className.slice(module.namespace.length).replace(/\\/g, path.sep)+'.php');
         }
@@ -676,7 +688,7 @@ class Magento {
         let [area, vendor, theme] = data.parent.split('/');
 
 
-        for(let module of this.indexer[this.folder.uri.fsPath].paths.theme) {
+        for(let module of this.getIndexer().paths.theme) {
             if (module.area === area && module.vendor === vendor && module.extension === theme) {
                 return module;
             }

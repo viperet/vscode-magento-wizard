@@ -14,7 +14,8 @@ Start typing `\Vendor\ExtensionName\` to get list of classes from that extension
 
 ![Dependency Injection ](https://github.com/viperet/vscode-magento-wizard/raw/master/images/dependency-injection.gif)
 
-- You can easily add observer for any event using "MagentoWizard: Add Observer" command, MagentoWizard even knows what data is passed to observers for some popular events.
+- You can easily add observer for any event using `MagentoWizard: Add Observer` command, MagentoWizard even knows what data is passed to observers for some popular events.
+- Use `MagentoWizard: Add CRUD Model/ResourceModel/Collection` to create all classes needed to access Model data in DB.
 - Ability to run all bin/magento commands using VSC Run Task command (Task provider can be disabled in the settings).
 - Generation of [XML Catalog](https://en.wikipedia.org/wiki/XML_catalog) file for Magento 2 XML DTD files. Run `MagentoWizard: Generate XML Catalog` command and extension will create XML Catalog file in the correct format. It will be added to the [XML](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-xml) extension config if that extension is installed.
 - `Go to Definition` function for class names and template names in XML Layouts.
@@ -43,6 +44,10 @@ If you found bug or want to request a new feature - just create new issue on git
 fork this repo and create pull request.
 
 ## Release Notes
+
+### 2.1.0
+
+Added templates for CRUD Model, ResourceModel, Collection. New command to create those classes automatically.
 
 ### 2.0.0
 
