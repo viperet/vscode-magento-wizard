@@ -104,14 +104,17 @@ export default async function (context: ExtensionContext, workspaceFolder: Works
             console.error(e);
             throw new Error('Error parsing ' + catalogOldUri.fsPath);
         }
+        const magentoRoot = await magento.getMagentoRootUri();
         if (xml && xml.project && xml.project.component) {
             for (let component of xml.project.component) {
                 if (component.resource) {
                     for (let resource of component.resource) {
+                        let location = resource._attributes.location;
+                        location = location.replace('$PROJECT_DIR$', magentoRoot.fsPath);
                         xmlCatalog.catalog.system.push({
                             _attributes: {
                                 systemId: resource._attributes.url,
-                                uri: resource._attributes.location,
+                                uri: location,
                             }
                         });
                     }
