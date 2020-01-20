@@ -325,6 +325,18 @@ export function activate(context: vscode.ExtensionContext) {
             }
         }));
 
+        context.subscriptions.push(vscode.commands.registerCommand('magentowizard.reindex', () => {
+            if (vscode.workspace.workspaceFolders) {
+                for(let workspaceFolder of vscode.workspace.workspaceFolders) {
+                    try {
+                        magento.indexer[workspaceFolder.uri.fsPath] = new Indexer(context, workspaceFolder, true);
+                    } catch(e) {
+                        vscode.window.showErrorMessage(e.message);
+                    }
+                }
+            }
+        }));
+
         let lastOpenedDocument: vscode.TextDocument | undefined;
         context.subscriptions.push(vscode.workspace.onDidOpenTextDocument(textDocument => {
             lastOpenedDocument = textDocument;

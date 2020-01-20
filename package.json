@@ -92,6 +92,10 @@
             {
                 "command": "magentowizard.generateCatalog",
                 "title": "MagentoWizard: Generate XML Catalog"
+            },
+            {
+                "command": "magentowizard.reindex",
+                "title": "MagentoWizard: Reindex Workspace"
             }
         ],
         "taskDefinitions": [

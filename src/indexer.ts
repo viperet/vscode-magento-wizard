@@ -33,9 +33,15 @@ export default class Indexer {
         registrations: {},
     };
 
-    constructor(context: ExtensionContext, workspaceFolder: WorkspaceFolder) {
+    constructor(context: ExtensionContext, workspaceFolder: WorkspaceFolder, forceReindex: boolean = false) {
         this.workspaceFolder = workspaceFolder;
         this.context = context;
+
+        if (forceReindex) {
+            // reset cache
+            this.context.workspaceState.update('indexer_'+this.workspaceFolder.uri.fsPath, undefined);
+        }
+
         // read config and start indexing
         this.readConfig();
         workspace.onDidChangeConfiguration(change => this.readConfig(change));
