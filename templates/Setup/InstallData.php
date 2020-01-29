@@ -7,7 +7,7 @@ use Magento\Framework\Setup\InstallDataInterface;
 use Magento\Framework\Setup\ModuleContextInterface;
 use Magento\Framework\Setup\ModuleDataSetupInterface;
 
-class InstallData implements UpgradeDataInterface
+class InstallData implements InstallDataInterface
 {
     private $eavSetupFactory;
 
