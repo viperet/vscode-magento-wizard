@@ -9,7 +9,7 @@ import addPlugin from './actions/addPlugin';
 import addCRUD from './actions/addCRUD';
 import generateCatalog from './actions/generateCatalog';
 import Php, { ClassMethod, MethodVisibility } from './php';
-import { MagentoTaskProvider } from './actions/MagentoTaskProvider';
+import { MagentoTaskProvider } from './actions/magentoTaskProvider';
 import { definitionProvider } from './actions/definitionProvider';
 import Indexer from './indexer';
 import * as output from './output';

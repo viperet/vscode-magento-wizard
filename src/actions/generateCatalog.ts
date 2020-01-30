@@ -1,7 +1,7 @@
 import { workspace, WorkspaceFolder, tasks, ConfigurationTarget, ExtensionContext, TaskExecution, extensions, window, Uri } from 'vscode';
 import * as convert from 'xml-js';
 import magento from '../magento';
-import { MagentoTaskProvider } from './MagentoTaskProvider';
+import { MagentoTaskProvider } from './magentoTaskProvider';
 import { fstat } from 'fs';
 
 
