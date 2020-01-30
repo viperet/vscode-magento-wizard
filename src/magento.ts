@@ -1,6 +1,6 @@
 import { workspace, Uri, FileType, TextEditor, Position, Range, WorkspaceFolder, window, QuickPickItem, SnippetString, RelativePattern, FileStat } from 'vscode';
 import * as path  from 'path';
-import classList from './classlist';
+import classList from './classList';
 import eventsList from './eventsList';
 import * as Case from 'case';
 import * as convert  from 'xml-js';
