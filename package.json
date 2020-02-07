@@ -169,6 +169,7 @@
         "node-cache": "^5.1.0",
         "p-progress": "^0.4.1",
         "php-parser": "^3.0.0-prerelease.9",
-        "xml-js": "^1.6.11"
+        "xml-js": "^1.6.11",
+        "xml-zero-lexer": "^2.0.5"
     }
 }

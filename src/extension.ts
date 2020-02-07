@@ -11,6 +11,7 @@ import generateCatalog from './actions/generateCatalog';
 import Php, { ClassMethod, MethodVisibility } from './php';
 import { MagentoTaskProvider } from './actions/magentoTaskProvider';
 import { definitionProvider } from './actions/definitionProvider';
+import { completionProvider } from './actions/completionProvider';
 import Indexer from './indexer';
 import * as output from './output';
 import * as Case from 'case';
@@ -357,6 +358,10 @@ export function activate(context: vscode.ExtensionContext) {
             {language: 'xml', scheme: 'file'},
             {language: 'xml', scheme: 'untitled'},
         ], definitionProvider));
+        context.subscriptions.push(vscode.languages.registerCompletionItemProvider([
+            {language: 'xml', scheme: 'file'},
+            {language: 'xml', scheme: 'untitled'},
+        ], completionProvider, '"'));
     } catch(e) {
         output.log('Unhandled exception', e.name, e.message, e.stack);
     }
