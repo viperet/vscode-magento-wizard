@@ -147,7 +147,8 @@ export function activate(context: vscode.ExtensionContext) {
                     magento.folder = folder;
                 }
                 if (textEditor) {
-                    let className = await createQuickPickCustom(magento.getClasses(data), { custom: true, step: 1, totalSteps: 2, title: 'Please select class or interface to inject' });
+                    let recents:string[] = context.workspaceState.get('recentClasses',[]);
+                    let className = await createQuickPickCustom(magento.getClasses(data), { custom: true, step: 1, totalSteps: 2, title: 'Please select class or interface to inject' }, recents);
                     if (className) {
                         var varName = await vscode.window.showInputBox({
                             prompt: 'Enter variable name',
@@ -155,6 +156,11 @@ export function activate(context: vscode.ExtensionContext) {
                             validateInput: value => { return !value.match(/^\$?[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*$/) ? 'Incorrect variable name' : '' ; },
                         });
                         if (varName) {
+                            recents.push(className);
+                            if (recents.length>5){
+                                recents.shift();
+                            }
+                            context.workspaceState.update('recentClasses', recents);
                             await injectDependency(textEditor, className, varName);
                         }
                     }
