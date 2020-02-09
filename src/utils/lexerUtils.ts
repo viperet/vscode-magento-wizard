@@ -57,15 +57,18 @@ enum NodeTypes {
 
 export class ElementNode {
     public parent: ElementNode;
+    public type: string;
     public tag: string;
     public text?: string;
     public contentStart?: number;
     public contentEnd?: number;
     public children?: ElementNode[];
+    public attributes?: ElementNode[];
 
-    constructor(parent: ElementNode, tag: string) {
+    constructor(parent: ElementNode, type: string, tag: string) {
         this.parent = parent;
         this.tag = tag;
+        this.type = type;
         this.text = "";
     }
 
@@ -94,6 +97,12 @@ export class ElementNode {
         this.children.push(child);
     }
 
+    public addAttribute(child: ElementNode): void {
+        if (this.attributes === undefined) {
+            this.attributes = [];
+        }
+        this.attributes.push(child);
+    }
 }
 
 export function getNodesByTag(text: string, tag: string): ElementNode[] {
@@ -121,6 +130,7 @@ function getElementHierarchy(text: string, tokens: number[][], tagOrOffset: numb
     const elementNodes: ElementNode[] = [];
     const tagNodes: ElementNode[] = [];
     let cursorNode: ElementNode | undefined;
+    let parentNode: ElementNode;
     let pointer: number = 0;
     let i: number = 0;
 
@@ -132,11 +142,11 @@ function getElementHierarchy(text: string, tokens: number[][], tagOrOffset: numb
             case NodeTypes.ELEMENT_NODE: {
                 // [_type, start, end] = token;
                 const [start, end] = token.slice(1, 3);
-                const newElement: ElementNode = new ElementNode(currentNode, text.substring(start, end));
+                const newElement: ElementNode = new ElementNode(parentNode!, 'tag', text.substring(start, end));
                 if (currentNode !== undefined) {
                     currentNode.addChild(newElement);
                 }
-
+                parentNode = newElement;
                 pointer = end + 1; // pass ">" mark.
                 elementNodes.push(newElement);
                 newElement.contentStart = pointer;
@@ -144,10 +154,15 @@ function getElementHierarchy(text: string, tokens: number[][], tagOrOffset: numb
             }
             case NodeTypes.ATTRIBUTE_NODE: {
                 // [_type, _keyStart, _keyEnd, _valueStart, valueEnd] = token;
-                const valueEnd: number = token[4];
                 // Attributes not handled yet.
-                pointer = valueEnd + 1; // pass ">" mark.
-                currentNode.contentStart = pointer;
+                const [start, end] = token.slice(1, 3);
+                const newElement: ElementNode = new ElementNode(parentNode!, 'attribute', text.substring(start, end));
+                if (parentNode! !== undefined) {
+                    parentNode.addAttribute(newElement);
+                }
+                pointer = end + 1; // pass ">" mark.
+                elementNodes.push(newElement);
+                newElement.contentStart = pointer;
                 break;
             }
             case NodeTypes.TEXT_NODE: {
