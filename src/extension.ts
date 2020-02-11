@@ -14,6 +14,7 @@ import { definitionProvider } from './actions/definitionProvider';
 import Indexer from './indexer';
 import * as output from './output';
 import * as Case from 'case';
+import * as _ from 'lodash';
 
 export function activate(context: vscode.ExtensionContext) {
 
@@ -147,7 +148,8 @@ export function activate(context: vscode.ExtensionContext) {
                     magento.folder = folder;
                 }
                 if (textEditor) {
-                    let recents:string[] = context.workspaceState.get('recentClasses',[]);
+                    // TODO Recetly used feature should be moved inside createQuickPickCustom()
+                    let recents:string[] = context.workspaceState.get('recentlyInjectedClasses', []);
                     let className = await createQuickPickCustom(magento.getClasses(data), { custom: true, step: 1, totalSteps: 2, title: 'Please select class or interface to inject' }, recents);
                     if (className) {
                         var varName = await vscode.window.showInputBox({
@@ -156,11 +158,14 @@ export function activate(context: vscode.ExtensionContext) {
                             validateInput: value => { return !value.match(/^\$?[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*$/) ? 'Incorrect variable name' : '' ; },
                         });
                         if (varName) {
+                            // Remove className from recents array in case it's already there
+                            recents = _.without(recents, className);
+                            // Add new value to the list
                             recents.push(className);
-                            if (recents.length>5){
+                            if (recents.length > 5){
                                 recents.shift();
                             }
-                            context.workspaceState.update('recentClasses', recents);
+                            context.workspaceState.update('recentlyInjectedClasses', recents);
                             await injectDependency(textEditor, className, varName);
                         }
                     }

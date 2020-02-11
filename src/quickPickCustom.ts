@@ -1,4 +1,5 @@
 import { window, QuickPickItem, QuickPickOptions } from 'vscode';
+import * as _ from 'lodash';
 
 export interface QuickPickCustomOptons extends QuickPickOptions {
     /** Title of QuickPick */
@@ -74,20 +75,20 @@ export default function createQuickPickCustom(
         } else if (typeof values[Symbol.asyncIterator] === 'function') {
             function processChunk(chunk: AsyncIterableIterator<string[]>) {
                 chunk.next().then(data => {
-                    items.push(...data.value.map((item: string) => ({ label: item })));
+                    items.push(...data.value.map((item: string) => ({
+                        label: item
+                    })));
                     // remove duplicates
-                    items = items.filter((item, index, self) => 
-                        index === self.findIndex(t => (
-                            t.label === item.label
-                        ))
-                    );
-
-                    // make the recent items always show
-                    items.forEach(item => {
-                        if (recents.includes(item.label)){
-                            item.alwaysShow = true;
-                            item.description = 'Recently Used';
-                        }
+                    items = _.uniqBy(items, 'label');
+                    // remove recently used
+                    _.pullAllWith(items, recents, (arrVal, othVal) => arrVal.label === othVal);
+                    // add the recent items to the begining
+                    // _.reverse(recents);
+                    recents.forEach(item => {
+                        items.unshift({
+                            label: item,
+                            description: 'Recently Used',
+                        });
                     });
 
                     quickPick.items = items;
@@ -106,7 +107,7 @@ export default function createQuickPickCustom(
                 chunk.next(value as any).then(data => {
                     items.push(...data.value.map((item: string) => ({ label: item })));
                     // remove duplicates
-                    items = items.filter((item, index, self) => 
+                    items = items.filter((item, index, self) =>
                         index === self.findIndex(t => (
                             t.label === item.label
                         ))
@@ -114,7 +115,7 @@ export default function createQuickPickCustom(
                     quickPick.items = items;
                     quickPick.busy = false;
                 });
-            });            
+            });
         }
     });
     return selection;
