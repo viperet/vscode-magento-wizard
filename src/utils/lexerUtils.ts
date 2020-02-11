@@ -128,55 +128,62 @@ function getElementHierarchy(text: string, tokens: number[][], tagOrOffset: numb
     }
     const n: number = tokens.length;
     const elementNodes: ElementNode[] = [];
+    const tags: ElementNode[] = [];
     const tagNodes: ElementNode[] = [];
     let cursorNode: ElementNode | undefined;
-    let parentNode: ElementNode;
     let pointer: number = 0;
     let i: number = 0;
 
     while (i < n) {
         const token: number[] = tokens[i];
         const currentNode: ElementNode = elementNodes[elementNodes.length - 1];
+        const parentTag = tags[tags.length - 1];
         switch (token[0]) {
             case NodeTypes.XML_DECLARATION:
             case NodeTypes.ELEMENT_NODE: {
                 // [_type, start, end] = token;
                 const [start, end] = token.slice(1, 3);
-                const newElement: ElementNode = new ElementNode(parentNode!, 'tag', text.substring(start, end));
-                if (currentNode !== undefined) {
-                    currentNode.addChild(newElement);
+                const newElement: ElementNode = new ElementNode(parentTag, 'tag', text.substring(start, end));
+                if (parentTag !== undefined) {
+                    parentTag.addChild(newElement);
                 }
-                parentNode = newElement;
                 pointer = end + 1; // pass ">" mark.
                 elementNodes.push(newElement);
+                tags.push(newElement);
                 newElement.contentStart = pointer;
                 break;
             }
             case NodeTypes.ATTRIBUTE_NODE: {
-                // [_type, _keyStart, _keyEnd, _valueStart, valueEnd] = token;
-                // Attributes not handled yet.
-                const [start, end] = token.slice(1, 3);
-                const newElement: ElementNode = new ElementNode(parentNode!, 'attribute', text.substring(start, end));
-                if (parentNode! !== undefined) {
-                    parentNode.addAttribute(newElement);
+                const [_type, start, end, _valueStart, valueEnd] = token;
+                const newElement: ElementNode = new ElementNode(parentTag, 'attribute', text.substring(start, end));
+                if (parentTag! !== undefined) {
+                    parentTag.addAttribute(newElement);
                 }
                 pointer = end + 1; // pass ">" mark.
                 elementNodes.push(newElement);
-                newElement.contentStart = pointer;
+                newElement.contentStart = start;
+                newElement.contentEnd = valueEnd;
                 break;
             }
             case NodeTypes.TEXT_NODE: {
                 // [_type, start, end] = token;
                 const [start, end] = token.slice(1, 3);
-                if (currentNode !== undefined) {
-                    currentNode.text = text.substring(start, end);
+                if (parentTag !== undefined) {
+                    parentTag.text = text.substring(start, end);
                 }
                 pointer = end;
                 break;
             }
             case NodeTypes.CLOSE_ELEMENT: {
-                currentNode.contentEnd = pointer;
+                parentTag.contentEnd = pointer;
+                if (parentTag.attributes) {
+                    for(let i = 0; i < parentTag.attributes.length; ++i) {
+                        // pop all attributes
+                        elementNodes.pop();
+                    }
+                }
                 elementNodes.pop();
+                tags.pop();
                 break;
             }
             default:
