@@ -15,7 +15,7 @@
     "extensionKind": [
         "workspace"
     ],
-    "preview": true,
+    "preview": false,
     "category": "Other",
     "icon": "images/magento-wizard-logo.png",
     "engines": {
