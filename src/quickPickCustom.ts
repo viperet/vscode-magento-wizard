@@ -13,7 +13,8 @@ export interface QuickPickCustomOptons extends QuickPickOptions {
 
 export default function createQuickPickCustom(
         values:string[] | Thenable<string[]> | AsyncIterableIterator<string[]> | QuickPickItem[],
-        options: QuickPickCustomOptons
+        options: QuickPickCustomOptons,
+        recents: string[] = []
     ): Promise<string> {
     let selection: Promise<string> = new Promise((resolve, reject) => {
         const quickPick = window.createQuickPick();
@@ -80,6 +81,15 @@ export default function createQuickPickCustom(
                             t.label === item.label
                         ))
                     );
+
+                    // make the recent items always show
+                    items.forEach(item => {
+                        if (recents.includes(item.label)){
+                            item.alwaysShow = true;
+                            item.description = 'Recently Used';
+                        }
+                    });
+
                     quickPick.items = items;
                     if (data.done || data.value.length === 0) {
                         quickPick.busy = false;
