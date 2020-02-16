@@ -11,10 +11,12 @@ import generateCatalog from './actions/generateCatalog';
 import Php, { ClassMethod, MethodVisibility } from './php';
 import { MagentoTaskProvider } from './actions/magentoTaskProvider';
 import { definitionProvider } from './actions/definitionProvider';
+import { completionProvider } from './actions/completionProvider';
 import Indexer from './indexer';
 import * as output from './output';
 import * as Case from 'case';
 import * as _ from 'lodash';
+import * as semver from 'semver';
 
 export function activate(context: vscode.ExtensionContext) {
 
@@ -231,7 +233,7 @@ export function activate(context: vscode.ExtensionContext) {
                 let className = await createQuickPickCustom(magento.getClasses(extensionData), { custom: true, step, totalSteps, title: 'Please enter or select class in which you want to intercept method call' });
                 if (!className) { return; }
 
-                let classFile = await magento.getClassFile(extensionData, className);
+                let classFile = await magento.getClassFile(className);
 
                 let methods: ClassMethod[] = [];
                 if (classFile && await magento.fileExists(classFile)) {
@@ -368,8 +370,22 @@ export function activate(context: vscode.ExtensionContext) {
             {language: 'xml', scheme: 'file'},
             {language: 'xml', scheme: 'untitled'},
         ], definitionProvider));
+        context.subscriptions.push(vscode.languages.registerCompletionItemProvider([
+            {language: 'xml', scheme: 'file'},
+            {language: 'xml', scheme: 'untitled'},
+        ], completionProvider, '"'));
     } catch(e) {
         output.log('Unhandled exception', e.name, e.message, e.stack);
+    }
+    const extension = vscode.extensions.getExtension('viperet.vscode-magento-wizard');
+    const previousVersion: string = context.globalState.get('version') || '';
+    if (extension) {
+        const currentVersion = extension.packageJSON.version;
+        if (semver.valid(previousVersion) && semver.gt(currentVersion, previousVersion)) {
+            vscode.window.showInformationMessage(`MagentoWizard was updated to ${currentVersion}. This version adds support for completion of class and template names in XML layouts and configuration files.`);
+            output.log(`MagentoWizard was updated from ${previousVersion} to ${currentVersion}`);
+        }
+        context.globalState.update('version', currentVersion);
     }
 }
 

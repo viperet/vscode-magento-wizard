@@ -356,6 +356,22 @@ class Magento {
         return classes;
     }
 
+    async searchViewFiles(searchPath: string, pattern?: string): Promise<string[]> {
+        let files: string[] = [];
+
+        let relativePattern = new RelativePattern(
+                searchPath,
+                pattern || '**'
+            );
+        let foundFiles = await workspace.findFiles(
+            relativePattern
+        );
+        for(let uri of foundFiles) {
+            files.push(uri.fsPath);
+        }
+        return files;
+    }
+
     /**
      * Creates variable name (without $ symbol) from class name
      *
@@ -503,7 +519,7 @@ class Magento {
      * @returns {(Uri | undefined)}
      * @memberof Magento
      */
-    async getClassFile(extension: ExtensionInfo, className: string): Promise<Uri | undefined> {
+    async getClassFile(className: string): Promise<Uri | undefined> {
         let module = this.getIndexer().findByClassName(className);
         if (module) {
             return this.appendUri(module.extensionUri, className.slice(module.namespace.length).replace(/\\/g, path.sep)+'.php');
