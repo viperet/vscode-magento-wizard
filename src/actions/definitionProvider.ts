@@ -116,7 +116,7 @@ class MagentoDefinitionProvider implements DefinitionProvider {
         if (!definition.resolved) {
             let uri;
             if (definition.targetType === 'class') {
-                uri = await magento.getClassFile(uriData, definition.targetName);
+                uri = await magento.getClassFile(definition.targetName);
             } else if (definition.targetType === 'file') {
                 uri = await magento.getViewFile(uriData, definition.targetName);
             }

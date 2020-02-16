@@ -154,8 +154,9 @@ function getElementHierarchy(text: string, tokens: number[][], tagOrOffset: numb
                 break;
             }
             case NodeTypes.ATTRIBUTE_NODE: {
-                const [_type, start, end, _valueStart, valueEnd] = token;
+                const [_type, start, end, valueStart, valueEnd] = token;
                 const newElement: ElementNode = new ElementNode(parentTag, 'attribute', text.substring(start, end));
+                newElement.text = text.substring(valueStart, valueEnd);
                 if (parentTag! !== undefined) {
                     parentTag.addAttribute(newElement);
                 }
