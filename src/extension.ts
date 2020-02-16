@@ -381,7 +381,7 @@ export function activate(context: vscode.ExtensionContext) {
     const previousVersion: string = context.globalState.get('version') || '';
     if (extension) {
         const currentVersion = extension.packageJSON.version;
-        if (semver.valid(previousVersion) && semver.gt(currentVersion, previousVersion)) {
+        if (semver.gt(currentVersion, previousVersion)) {
             vscode.window.showInformationMessage(`MagentoWizard was updated to ${currentVersion}. This version adds support for completion of class and template names in XML layouts and configuration files.`);
             output.log(`MagentoWizard was updated from ${previousVersion} to ${currentVersion}`);
         }
