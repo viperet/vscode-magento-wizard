@@ -1,4 +1,10 @@
-# MagentoWizard README
+# MagentoWizard
+
+![Visual Studio Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/viperet.vscode-magento-wizard)
+![Visual Studio Marketplace Installs](https://img.shields.io/visual-studio-marketplace/i/viperet.vscode-magento-wizard)
+![Visual Studio Marketplace Downloads](https://img.shields.io/visual-studio-marketplace/d/viperet.vscode-magento-wizard)
+![Visual Studio Marketplace Rating](https://img.shields.io/visual-studio-marketplace/r/viperet.vscode-magento-wizard)
+![Visual Studio Marketplace Rating (Stars)](https://img.shields.io/visual-studio-marketplace/stars/viperet.vscode-magento-wizard)
 
 This extension will ease life of the Magento 2 developer by automating some repeating tasks.
 
