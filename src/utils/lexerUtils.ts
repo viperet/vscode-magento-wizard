@@ -162,7 +162,7 @@ function getElementHierarchy(text: string, tokens: number[][], tagOrOffset: numb
                 }
                 pointer = end + 1; // pass ">" mark.
                 elementNodes.push(newElement);
-                newElement.contentStart = start;
+                newElement.contentStart = valueStart;
                 newElement.contentEnd = valueEnd;
                 break;
             }

@@ -1,5 +1,5 @@
 import magento, { UriData, ExtentionKind } from '../magento';
-import { workspace, CompletionItemProvider, TextDocument, Position, CancellationToken, CompletionContext, CompletionItem, CompletionList, CompletionItemKind, Uri} from 'vscode';
+import { workspace, CompletionItemProvider, TextDocument, Position, CancellationToken, CompletionContext, CompletionItem, CompletionList, CompletionItemKind, Range} from 'vscode';
 import { ElementNode, getCurrentNode, XmlTagName } from "../utils/lexerUtils";
 import * as output from '../output';
 import * as _ from 'lodash';
@@ -24,47 +24,53 @@ class MagentoCompletionProvider implements CompletionItemProvider {
             return undefined;
         }
         const completionText = currentNode.text || '';
+        let items: CompletionItem[] = [];
         if (currentNode.type === 'attribute') {
             if (currentNode.tag === 'instance' && currentNode.parent.tag === 'job' && extensionData.name === 'crontab') {
-                return this.classesCompletion(completionText, extensionData, 'Cron');
+                items = await this.classesCompletion(completionText, extensionData, 'Cron');
             } else if (currentNode.tag === 'instance' && currentNode.parent.tag === 'observer' && extensionData.name === 'events') {
-                return this.classesCompletion(completionText, extensionData, 'Observer');
+                items = await this.classesCompletion(completionText, extensionData, 'Observer');
             } else if (currentNode.tag === 'type' && currentNode.parent.tag === 'plugin' && extensionData.name === 'di') {
-                return this.classesCompletion(completionText, extensionData, 'Plugin');
+                items = await this.classesCompletion(completionText, extensionData, 'Plugin');
             } else if (currentNode.tag === 'class' && currentNode.parent.tag === 'service' && extensionData.name === 'webapi') {
-                return this.classesCompletion(completionText, extensionData, 'Api');
+                items = await this.classesCompletion(completionText, extensionData, 'Api');
             } else if (currentNode.tag === 'method' && currentNode.parent.tag === 'service' && extensionData.name === 'webapi') {
                 const className = _.find(currentNode.parent.attributes, attribute => attribute.tag === 'class')?.text;
                 if (className) {
-                    return this.classMethodsCompletion(className);
+                    items = await this.classMethodsCompletion(className);
                 }
                 return undefined;
             } else if (currentNode.tag === 'class' && currentNode.parent.tag === 'block' && extensionData.type === 'view') {
-                return this.classesCompletion(completionText, extensionData, 'Block');
+                items = await this.classesCompletion(completionText, extensionData, 'Block');
             } else if (currentNode.tag === 'template') {
-                return this.templatesCompletion(completionText, extensionData);
+                items = await this.templatesCompletion(completionText, extensionData);
             } else if (currentNode.tag === 'src' && currentNode.parent.tag === 'css') {
-                return this.webCompletion(completionText, extensionData, 'css');
+                items = await this.webCompletion(completionText, extensionData, 'css');
             } else if (currentNode.tag === 'src' && (currentNode.parent.tag === 'js' || currentNode.parent.tag === 'link')) {
-                return this.webCompletion(completionText, extensionData, 'js');
+                items = await this.webCompletion(completionText, extensionData, 'js');
             } else if (currentNode.tag === 'src' && currentNode.parent.tag === 'remove') {
-                return this.webCompletion(completionText, extensionData, '{js,css}');
+                items = await this.webCompletion(completionText, extensionData, '{js,css}');
             } else if (currentNode.tag === 'layout' && currentNode.parent.tag === 'page') {
-                return this.layoutCompletion(completionText, extensionData);
+                items = await this.layoutCompletion(completionText, extensionData);
             } else if ( currentNode.tag === 'instance' ) {
-                return this.classesCompletion(completionText, extensionData);
+                items = await this.classesCompletion(completionText, extensionData);
             }
         }
-        return [];
-    }
-
-    async layoutCompletion(text: string, extensionData: UriData): Promise<CompletionList | undefined> {
-        const layouts: string[] = ['empty', '1column', '2columns-left', '2columns-right', '3columns'];
-        const items: CompletionItem[] = layouts.map(layout => new CompletionItem(layout, CompletionItemKind.Value));
+        items.forEach(item => {
+            if (currentNode.contentStart && currentNode.contentEnd) {
+                item.range = new Range(document.positionAt(currentNode.contentStart), document.positionAt(currentNode.contentEnd) );
+            }
+        });
         return new CompletionList(items);
     }
 
-    async webCompletion(text: string, extensionData: UriData, type: string): Promise<CompletionList | undefined> {
+    async layoutCompletion(text: string, extensionData: UriData): Promise<CompletionItem[]> {
+        const layouts: string[] = ['empty', '1column', '2columns-left', '2columns-right', '3columns'];
+        const items: CompletionItem[] = layouts.map(layout => new CompletionItem(layout, CompletionItemKind.Value));
+        return items;
+    }
+
+    async webCompletion(text: string, extensionData: UriData, type: string): Promise<CompletionItem[]> {
         const items: CompletionItem[] = [];
         let basePath;
         if (extensionData.kind === ExtentionKind.Module) {
@@ -72,17 +78,17 @@ class MagentoCompletionProvider implements CompletionItemProvider {
         } else if (extensionData.kind === ExtentionKind.Theme) {
             basePath = `${extensionData.extensionFolder}web/`;
         } else {
-            return undefined;
+            return [];
         }
         const files = await magento.searchViewFiles(basePath, `**/*.${type}`);
         for(let file of files) {
             const template = path.relative(basePath, file);
             items.push(new CompletionItem(template, CompletionItemKind.File));
         }
-        return new CompletionList(items);
+        return items;
     }
 
-    async templatesCompletion(text: string , extensionData: UriData): Promise<CompletionList | undefined> {
+    async templatesCompletion(text: string , extensionData: UriData): Promise<CompletionItem[]> {
         const items: CompletionItem[] = [];
         let basePath;
         if (extensionData.kind === ExtentionKind.Module) {
@@ -90,7 +96,7 @@ class MagentoCompletionProvider implements CompletionItemProvider {
         } else if (extensionData.kind === ExtentionKind.Theme) {
             basePath = `${extensionData.extensionFolder}`;
         } else {
-            return undefined;
+            return [];
         }
         const files = await magento.searchViewFiles(basePath, '**/*.phtml');
         for(let file of files) {
@@ -104,10 +110,10 @@ class MagentoCompletionProvider implements CompletionItemProvider {
                 items.push(new CompletionItem(template, CompletionItemKind.File));
             }
         }
-        return new CompletionList(items);
+        return items;
     }
 
-    async classesCompletion(text: string , extensionData: UriData, type?: string): Promise<CompletionList> {
+    async classesCompletion(text: string , extensionData: UriData, type?: string): Promise<CompletionItem[]> {
         const items: CompletionItem[] = [];
         const folder = extensionData.extensionFolder;
         const classes = await magento.searchClasses(folder);
@@ -116,17 +122,17 @@ class MagentoCompletionProvider implements CompletionItemProvider {
                 items.push(new CompletionItem(className.substr(1), CompletionItemKind.Class));
             }
         }
-        return new CompletionList(items);
+        return items;
     }
 
-    async classMethodsCompletion(className: string): Promise<CompletionList> {
+    async classMethodsCompletion(className: string): Promise<CompletionItem[]> {
         const items: CompletionItem[] = [];
         const classFile = await magento.getClassFile(className);
         if (classFile) {
             const methods = await magento.getClassMethods(classFile);
             items.push(...methods.map(method => new CompletionItem(method.name, CompletionItemKind.Method)));
         }
-        return new CompletionList(items);
+        return items;
     }
 }
 export const completionProvider = new MagentoCompletionProvider();
