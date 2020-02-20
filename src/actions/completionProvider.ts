@@ -46,7 +46,7 @@ class MagentoCompletionProvider implements CompletionItemProvider {
                 items = await this.templatesCompletion(completionText, extensionData);
             } else if (currentNode.tag === 'src' && currentNode.parent.tag === 'css') {
                 items = await this.webCompletion(completionText, extensionData, 'css');
-            } else if (currentNode.tag === 'src' && (currentNode.parent.tag === 'js' || currentNode.parent.tag === 'link')) {
+            } else if (currentNode.tag === 'src' && (currentNode.parent.tag === 'script' || currentNode.parent.tag === 'link')) {
                 items = await this.webCompletion(completionText, extensionData, 'js');
             } else if (currentNode.tag === 'src' && currentNode.parent.tag === 'remove') {
                 items = await this.webCompletion(completionText, extensionData, '{js,css}');
@@ -72,17 +72,26 @@ class MagentoCompletionProvider implements CompletionItemProvider {
 
     async webCompletion(text: string, extensionData: UriData, type: string): Promise<CompletionItem[]> {
         const items: CompletionItem[] = [];
-        let basePath;
+        let basePath, pattern, files;
         if (extensionData.kind === ExtentionKind.Module) {
             basePath = `${extensionData.extensionFolder}view/${extensionData.area}/web/`;
+            pattern = `**/*.${type}`;
+            files = await magento.searchViewFiles(basePath, pattern);
         } else if (extensionData.kind === ExtentionKind.Theme) {
-            basePath = `${extensionData.extensionFolder}web/`;
+            basePath = `${extensionData.extensionFolder}`;
+            files = await magento.searchViewFiles(basePath, `*/web/**/*.${type}`);
+            files = files.concat(await magento.searchViewFiles(basePath, `web/**/*.${type}`));
         } else {
             return [];
         }
-        const files = await magento.searchViewFiles(basePath, `**/*.${type}`);
+
         for(let file of files) {
-            const template = path.relative(basePath, file);
+            let template = path.relative(basePath, file);
+            if (extensionData.kind === ExtentionKind.Module) {
+                template = extensionData.componentName + '::' + template;
+            } else if (extensionData.kind === ExtentionKind.Theme) {
+                template = template.replace(/^web\//, '').replace(/^([^\/]+)\/web\//, '$1::');
+            }
             items.push(new CompletionItem(template, CompletionItemKind.File));
         }
         return items;
@@ -120,6 +129,18 @@ class MagentoCompletionProvider implements CompletionItemProvider {
         for(let className of classes) {
             if (!type || className.includes(`\\${type}\\`)) {
                 items.push(new CompletionItem(className.substr(1), CompletionItemKind.Class));
+            }
+        }
+        const indexer = magento.indexer[extensionData.workspace.uri.fsPath];
+        for(let module of indexer.paths.module) {
+            let namespace = module.namespace.replace(/\\$/, '');
+            if (text.startsWith(namespace)) {
+                const classes = await magento.searchClasses(module.extensionFolder);
+                for(let className of classes) {
+                    if (!type || className.includes(`\\${type}\\`)) {
+                        items.push(new CompletionItem(className.substr(1), CompletionItemKind.Class));
+                    }
+                }
             }
         }
         return items;
