@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:DataObject/etc/fieldset.xsd">
+    <scope id="${1:global}">
+        <fieldset id="${2:sales_convert_quote}">
+            <field name="${3:demo}">
+                <aspect name="${4:to_order}" />
+            </field>
+        </fieldset>
+    </scope>
+</config>
