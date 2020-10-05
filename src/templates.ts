@@ -17,6 +17,7 @@ const templates: { [key: string]: string } = {
     '\/etc\/(adminhtml\/)?catalog_attributes\.xml$': require('../templates/etc/catalog_attributes.xml'),
     '\/etc\/(adminhtml\/)?menu\.xml$': require('../templates/etc/menu.xml'),
     '\/view\/(frontend|adminhtml)\/layout\/.*\.xml$': require('../templates/layout.xml'),
+    '\/view\/(frontend|adminhtml)\/templates\/.*\.phtml$': require('../templates/template.phtml'),
     '\/Block\/.*\.php$': require('../templates/block.php'),
     '\/Controller\/Adminhtml\/.*\.php$': require('../templates/controller_backend.php'),
     '\/Controller\/.*\.php$': require('../templates/controller.php'),
