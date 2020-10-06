@@ -1,4 +1,4 @@
-import { Uri, workspace, WorkspaceFolder, RelativePattern, ExtensionContext, WorkspaceConfiguration, window, FileSystemWatcher, Disposable, ConfigurationChangeEvent } from 'vscode';
+import { Uri, workspace, WorkspaceFolder, RelativePattern, ExtensionContext, WorkspaceConfiguration, window, FileSystemWatcher, Disposable, ConfigurationChangeEvent, Range } from 'vscode';
 import * as path  from 'path';
 import magento, { UriData, ExtentionKind } from './magento';
 import * as convert  from 'xml-js';
@@ -6,6 +6,9 @@ import * as PProgress from 'p-progress';
 import * as fs from 'fs';
 import * as _ from 'lodash';
 import * as output from './output';
+import { getNodesByTag, ElementNode } from './utils/lexerUtils';
+
+const INDEX_VERSION = '2';
 
 interface RegistrationData {
     module: UriData[];
@@ -13,7 +16,21 @@ interface RegistrationData {
     language: UriData[];
     theme: UriData[];
     setup: UriData[];
+    blocks: BlockData[];
     registrations: { [registration: string]: number };
+}
+
+interface BlockData {
+    name: string;
+    uri: Uri;
+    filename: string;
+    start: number;
+    end: number;
+    kind: ExtentionKind;
+    type: string;
+    componentName: string;
+    className: string;
+    templateName: string;
 }
 
 export default class Indexer {
@@ -30,6 +47,7 @@ export default class Indexer {
         language: [],
         theme: [],
         setup: [],
+        blocks: [],
         registrations: {},
     };
 
@@ -52,6 +70,7 @@ export default class Indexer {
                 output.log('Found Magento root at', magentoRoot.fsPath);
                 output.log(' - Modules:', this.paths.module.length);
                 output.log(' - Themes:', this.paths.theme.length);
+                output.log(' - Blocks:', this.paths.blocks.length);
             } else {
                 output.log(`No Magento root in '${workspaceFolder.name}' workspace folder (${workspaceFolder.uri.fsPath})`);
             }
@@ -68,13 +87,19 @@ export default class Indexer {
     }
 
     public load(): boolean {
-        const savedData: { paths:RegistrationData, magentoRoot: Uri } | undefined = this.context.workspaceState.get('indexer_'+this.workspaceFolder.uri.fsPath);
+        const savedData: { version: string, paths:RegistrationData, magentoRoot: Uri } | undefined = this.context.workspaceState.get('indexer_'+this.workspaceFolder.uri.fsPath);
         if (savedData) {
+            if (savedData.version !== INDEX_VERSION) {
+                return false;
+            }
             // restore Uri
             for(let extensions of [savedData.paths.module, savedData.paths.library, savedData.paths.setup, savedData.paths.theme, savedData.paths.language]) {
                 for(let module of extensions) {
                     module.extensionUri = Uri.file(module.extensionUri.path);
                 }
+            }
+            for(let block of savedData.paths.blocks) {
+                block.uri = Uri.file(block.uri.path);
             }
             this.paths = savedData.paths;
             this.magentoRoot = Promise.resolve(savedData.magentoRoot);
@@ -85,6 +110,7 @@ export default class Indexer {
 
     public async toJSON(): Promise<any> {
         return {
+            version: INDEX_VERSION,
             magentoRoot: await this.magentoRoot,
             paths: this.paths,
         };
@@ -119,6 +145,7 @@ export default class Indexer {
             language: [],
             theme: [],
             setup: [],
+            blocks: [],
             registrations: {},
         };
 
@@ -237,6 +264,11 @@ export default class Indexer {
             //     classes.push(className);
             // });
 
+            const blockFiles = await workspace.findFiles(new RelativePattern(registrations[componentName], '**/layout/*.xml'), '**/tests/**');
+            for(const file of blockFiles) {
+                this.paths.blocks.push(...await this.indexLayout(file, ExtentionKind.Module, componentName));
+            }
+
             components.push({
                 kind: ExtentionKind.Module,
                 extensionFolder: path.normalize(registrations[componentName])+path.sep,
@@ -271,6 +303,11 @@ export default class Indexer {
             } catch {
             }
 
+            const blockFiles = await workspace.findFiles(new RelativePattern(registrations[componentName], '**/layout/*.xml'), '**/tests/**');
+            for(const file of blockFiles) {
+                this.paths.blocks.push(...await this.indexLayout(file, ExtentionKind.Theme, componentName));
+            }
+
             components.push({
                 kind: ExtentionKind.Theme,
                 extensionFolder: path.normalize(registrations[componentName])+path.sep,
@@ -288,6 +325,46 @@ export default class Indexer {
             });
         }
         return components;
+    }
+
+    async indexLayout(uri: Uri, kind: ExtentionKind, componentName: string): Promise<BlockData[]> {
+        const blocks: BlockData[] = [];
+        const text = await magento.readFile(uri);
+        const nodes: ElementNode[] = [
+            ...getNodesByTag(text, 'block', 'tag'),
+            ...getNodesByTag(text, 'container', 'tag'),
+            ...getNodesByTag(text, 'referenceBlock', 'tag'),
+            ...getNodesByTag(text, 'referenceContainer', 'tag')
+        ];
+        for (const node of nodes) {
+            let name: string | undefined;
+            let className: string | undefined;
+            let templateName: string | undefined;
+            if (node.attributes) {
+                for (const attribute of node.attributes) {
+                    switch(attribute.tag) {
+                        case 'name': name = attribute.text; break;
+                        case 'class': className = attribute.text; break;
+                        case 'template': templateName = attribute.text; break;
+                    }
+                }
+            }
+            if (name) {
+                blocks.push({
+                    name,
+                    uri,
+                    filename: path.basename(uri.fsPath),
+                    start: node.contentStart!,
+                    end: node.contentEnd!,
+                    kind,
+                    type: node.tag,
+                    componentName,
+                    className: className || '',
+                    templateName: templateName || '',
+                });
+            }
+        }
+        return blocks;
     }
 
     removeFromIndex(path: string): void {
