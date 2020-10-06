@@ -105,20 +105,20 @@ export class ElementNode {
     }
 }
 
-export function getNodesByTag(text: string, tag: string): ElementNode[] {
+export function getNodesByTag(text: string, tag: string, type?: string): ElementNode[] {
     const tokens: number[][] = Lexx(text);
-    return getElementHierarchy(text, tokens, tag);
+    return getElementHierarchy(text, tokens, tag, type);
 }
 
-export function getCurrentNode(text: string, offset: number): ElementNode | undefined {
+export function getCurrentNode(text: string, offset: number, type?: string): ElementNode | undefined {
     const tokens: number[][] = Lexx(text);
-    return getElementHierarchy(text, tokens, offset);
+    return getElementHierarchy(text, tokens, offset, type);
 }
 
-function getElementHierarchy(text: string, tokens: number[][], targetTag: string): ElementNode[];
-function getElementHierarchy(text: string, tokens: number[][], cursorOffset: number): ElementNode;
+function getElementHierarchy(text: string, tokens: number[][], targetTag: string, type?: string): ElementNode[];
+function getElementHierarchy(text: string, tokens: number[][], cursorOffset: number, type?: string): ElementNode;
 // tslint:disable-next-line:cyclomatic-complexity
-function getElementHierarchy(text: string, tokens: number[][], tagOrOffset: number | string): ElementNode | ElementNode[] | undefined {
+function getElementHierarchy(text: string, tokens: number[][], tagOrOffset: number | string, type?: string): ElementNode | ElementNode[] | undefined {
     let targetTag: string | undefined;
     let cursorOffset: number | undefined;
     if (typeof tagOrOffset === "string") {
@@ -190,12 +190,17 @@ function getElementHierarchy(text: string, tokens: number[][], tagOrOffset: numb
             default:
                 break;
         }
-        if (targetTag !== undefined && currentNode !== undefined && targetTag === currentNode.tag && tagNodes.indexOf(currentNode) < 0) {
+        if (targetTag !== undefined
+            && currentNode !== undefined
+            && targetTag === currentNode.tag
+            && tagNodes.indexOf(currentNode) < 0
+            && (!type || currentNode.type === type)) {
             tagNodes.push(currentNode);
         }
         if (cursorOffset !== undefined
             && cursorNode === undefined
             && currentNode !== undefined
+            && (!type || currentNode.type === type)
             && currentNode.contentStart !== undefined && currentNode.contentStart <= cursorOffset
             && currentNode.contentEnd !== undefined && cursorOffset <= currentNode.contentEnd) {
             cursorNode = currentNode;

@@ -1,5 +1,5 @@
 import magento, { UriData, ExtentionKind } from '../magento';
-import { workspace, CompletionItemProvider, TextDocument, Position, CancellationToken, CompletionContext, CompletionItem, CompletionList, CompletionItemKind, Range} from 'vscode';
+import { workspace, CompletionItemProvider, TextDocument, Position, CancellationToken, CompletionContext, CompletionItem, CompletionList, CompletionItemKind, Range, MarkdownString} from 'vscode';
 import { ElementNode, getCurrentNode, XmlTagName } from "../utils/lexerUtils";
 import * as output from '../output';
 import * as _ from 'lodash';
@@ -52,6 +52,10 @@ class MagentoCompletionProvider implements CompletionItemProvider {
                 items = await this.webCompletion(completionText, extensionData, '{js,css}');
             } else if (currentNode.tag === 'layout' && currentNode.parent.tag === 'page') {
                 items = await this.layoutCompletion(completionText, extensionData);
+            } else if (currentNode.tag === 'name' && currentNode.parent.tag === 'referenceBlock') {
+                items = await this.blockNameCompletion(completionText, extensionData, 'block');
+            } else if (currentNode.tag === 'name' && currentNode.parent.tag === 'referenceContainer') {
+                items = await this.blockNameCompletion(completionText, extensionData, 'container');
             } else if ( currentNode.tag === 'instance' ) {
                 items = await this.classesCompletion(completionText, extensionData);
             }
@@ -154,6 +158,34 @@ class MagentoCompletionProvider implements CompletionItemProvider {
             items.push(...methods.map(method => new CompletionItem(method.name, CompletionItemKind.Method)));
         }
         return items;
+    }
+
+    async blockNameCompletion(text: string , extensionData: UriData, type: string): Promise<CompletionItem[]> {
+        const indexer = magento.indexer[extensionData.workspace.uri.fsPath];
+        const blocks = indexer.paths.blocks
+            .filter(block => (block.filename === extensionData.name+'.xml' || block.filename === 'default.xml')
+                && (block.kind === ExtentionKind.Theme || block.componentName.startsWith('Magento_') || block.componentName === extensionData.componentName)
+                && block.type === type);
+        const items: CompletionItem[] = [];
+        for (let block of blocks) {
+            const item = new CompletionItem(block.name, CompletionItemKind.Reference);
+            item.detail = `Defined in ${block.componentName}`;
+            let doc: string = '';
+            if (block.className) {
+                let classFileUri = await magento.getClassFile(block.className);
+                doc += classFileUri ? `Block [${block.className}](${classFileUri.fsPath})\n\n` : `Block **${block.className}**\n\n`;
+            }
+            if (block.templateName) {
+                let data = await magento.getUriData(block.uri);
+                if (data) {
+                    let templateFileUri = await magento.getViewFile(data, block.templateName);
+                    doc += templateFileUri ? `Template [${block.templateName}](${templateFileUri.fsPath})\n\n` : `Template **${block.templateName}**\n\n`;
+                }
+            }
+            item.documentation = new MarkdownString(doc);
+            items.push(item);
+        }
+        return _.uniqBy(items, 'label');
     }
 }
 export const completionProvider = new MagentoCompletionProvider();
