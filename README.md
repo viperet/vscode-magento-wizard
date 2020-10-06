@@ -52,6 +52,10 @@ fork this repo and create pull request.
 
 ## Release Notes
 
+### 2.4.0
+
+Autocompletion of the block names in XML layouts.
+
 ### 2.3.0
 
 Autocompletion of the class and template names in XML layouts and configurations.
