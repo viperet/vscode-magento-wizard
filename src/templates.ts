@@ -2,6 +2,7 @@ const templates: { [key: string]: string } = {
     '\/etc\/module\.xml$': require('../templates/etc/module.xml'),
     'di\.xml$': require('../templates/etc/di.xml'),
     'acl\.xml$': require('../templates/etc/acl.xml'),
+    'requirejs\-config\.js$': require('../templates/requirejs-config.js'),
     '\/etc\/email_templates\.xml$': require('../templates/etc/email_templates.xml'),
     '\/etc\/sales\.xml$': require('../templates/etc/sales.xml'),
     '\/etc\/fieldset\.xml$': require('../templates/etc/fieldset.xml'),
