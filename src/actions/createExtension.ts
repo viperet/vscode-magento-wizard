@@ -1,4 +1,5 @@
 import { workspace, Uri, WorkspaceFolder } from 'vscode';
+import * as output from '../output';
 import magento  from '../magento';
 const fs = workspace.fs;
 
@@ -17,9 +18,12 @@ export default async function (vendor: string, extension: string): Promise<Uri> 
     const composerJsonUri = magento.appendUri(extensionUri, 'composer.json');
     const moduleXmlUri = magento.appendUri(extensionUri, 'etc', 'module.xml');
     try {
+        output.log(`Creating '${extensionUri.fsPath}'`);
         await fs.createDirectory(extensionUri);
+        output.log(`Creating '${extensionUri.fsPath}'`);
         await fs.createDirectory(magento.appendUri(extensionUri, 'etc'));
-    } catch {
+    } catch (e){
+        output.log(`Error creating extension folder: ${(e as Error).message}`);
         throw new Error('Error creating extension folder');
     }
     try {
