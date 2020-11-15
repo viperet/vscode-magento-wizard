@@ -40,7 +40,7 @@ export default async function (vendor: string, extension: string): Promise<Uri> 
             magento.encoder(require('../../templates/composer.handlebars')({ vendor, extension }))
         );
     } catch (e) {
-        console.log(e);
+        output.log(`Error creating extension files: ${(e as Error).message}`);
         throw new Error('Error creating extension files');
     }
     await workspace.openTextDocument(moduleXmlUri);
