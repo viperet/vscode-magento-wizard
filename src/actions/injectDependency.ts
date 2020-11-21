@@ -1,3 +1,4 @@
+//@ts-nocheck
 import { workspace, TextEditor, Position, Range } from 'vscode';
 import magento  from '../magento';
 import Php from '../php';
