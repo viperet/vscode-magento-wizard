@@ -19,7 +19,7 @@
     "category": "Other",
     "icon": "images/magento-wizard-logo.png",
     "engines": {
-        "vscode": "^1.40.0"
+        "vscode": "^1.45.0"
     },
     "categories": [
         "Other"
@@ -62,7 +62,7 @@
                     "magentoWizard.magentoRoot": {
                         "type": "string",
                         "default": "",
-                        "description": "Path to the root of Magento, absoulute or relative to the workspace folder. Autodetected if empty.",
+                        "description": "Path to the root of Magento, absolute or relative to the workspace folder. Autodetected if empty.",
                         "scope": "resource"
                     }
                 }
@@ -150,7 +150,7 @@
         "@types/glob": "^7.1.1",
         "@types/mocha": "^5.2.6",
         "@types/node": "^10.17.9",
-        "@types/vscode": "^1.40.0",
+        "@types/vscode": "^1.45.0",
         "glob": "^7.1.6",
         "handlebars": "^4.5.3",
         "mocha": "^6.2.2",

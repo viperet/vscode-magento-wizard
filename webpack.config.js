@@ -39,7 +39,7 @@ const config = {
                 ]
             },
             {
-                test: /\/templates\//,
+                test: /[\\\/]+templates[\\\/]+/,
                 use: [
                     {
                         loader: '@icetee/handlebars-loader',

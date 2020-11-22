@@ -122,12 +122,12 @@ export function activate(context: vscode.ExtensionContext) {
         });
 
         context.subscriptions.push(vscode.commands.registerCommand('magentowizard.newExtension', async () => {
-            const data = await getVendorExtension({ custom: true });
-            if (!data) {
-                return;
-            }
-            magento.folder = data.workspace;
             try {
+                const data = await getVendorExtension({ custom: true });
+                if (!data) {
+                    return;
+                }
+                magento.folder = data.workspace;
                 await createExtension(data.vendor, data.extension);
                 vscode.window.showInformationMessage(`Created extension ${data.vendor}_${data.extension}`);
             } catch (e) {
@@ -379,11 +379,14 @@ export function activate(context: vscode.ExtensionContext) {
     }
     const extension = vscode.extensions.getExtension('viperet.vscode-magento-wizard');
     const previousVersion: string = context.globalState.get('version') || '';
-    if (extension) {
+    if (extension && previousVersion) {
         const currentVersion = extension.packageJSON.version;
-        if (semver.gt(currentVersion, previousVersion)) {
-            // vscode.window.showInformationMessage(`MagentoWizard was updated to ${currentVersion}. This version adds support for completion of class and template names in XML layouts and configuration files.`);
-            output.log(`MagentoWizard was updated from ${previousVersion} to ${currentVersion}`);
+        try {
+            if (semver.gt(currentVersion, previousVersion)) {
+                output.log(`MagentoWizard was updated from ${previousVersion} to ${currentVersion}`);
+            }
+        } catch {
+            output.log(`MagentoWizard ${currentVersion} installed`);
         }
         context.globalState.update('version', currentVersion);
     }

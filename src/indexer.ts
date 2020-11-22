@@ -169,18 +169,34 @@ export default class Indexer {
             magentoRoot = Uri.file(magentoRootConfig);
         } else {
             // autodetect magento root if it's not loaded
-            const env = await workspace.findFiles(new RelativePattern(this.workspaceFolder, '**/app/etc/env.php'), '**/{tests,vendor}/**', 1);
+            const env = await workspace.findFiles(new RelativePattern(this.workspaceFolder, '**/bin/magento'), '**/{tests,vendor}/**', 1);
             if (env.length > 0) {
-                magentoRoot = magento.appendUri(env[0], '..', '..', '..');
+                magentoRoot = magento.appendUri(env[0], '..', '..');
             } else {
                 status.dispose();
                 return undefined;
             }
         }
-        const files = await workspace.findFiles(new RelativePattern(magentoRoot.fsPath, '**/{app,vendor}/**/registration.php'), '**/tests/**');
-        const registrations =  PProgress.all(files.map(file => this.register.bind(this, file)), { concurrency: 5});
-        registrations.onProgress(progress => status.text = statusText+Math.round(progress*100)+'%');
-        await registrations;
+
+        // test if we have PHP available
+        try {
+            let { stdout, stderr } = await magento.exec(`${this.php} --version`, {});
+            let lines = stdout.split('\n');
+            if (lines.length > 0) {
+                output.log(lines[0]);
+            }
+            
+            const files = await workspace.findFiles(new RelativePattern(magentoRoot.fsPath, '**/{app,vendor}/**/registration.php'), '**/tests/**');
+            const registrations =  PProgress.all(files.map(file => this.register.bind(this, file)), { concurrency: 5});
+            registrations.onProgress(progress => status.text = statusText+Math.round(progress*100)+'%');
+            await registrations;
+        } catch(e) {
+            output.log(e.message);
+            output.log(`Looks like we don't have PHP executable available at '${this.php}'. Please set correct path in the extension settings.`)
+            output.log(`Many features would be unavailable without access to PHP executable.`)
+        }
+
+
         status.dispose();
 
         // save index data
