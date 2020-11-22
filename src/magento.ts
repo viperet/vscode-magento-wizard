@@ -6,6 +6,7 @@ import * as Case from 'case';
 import * as convert  from 'xml-js';
 import * as NodeCache from 'node-cache';
 import * as cp from 'child_process';
+import * as output from './output';
 const fs = workspace.fs;
 
 import { TextEncoder, TextDecoder } from 'util';
@@ -85,7 +86,8 @@ class Magento {
      * @memberof Magento
      */
     appendUri(uri: Uri, ...args: string[]): Uri {
-        return uri.with({ path: path.join(uri.path, ...args) });
+        // return uri.with({ path: path.join(uri.path, ...args) });
+        return Uri.joinPath(uri, ...args);
     }
 
     async getMagentoRootUri(): Promise<Uri> {
@@ -110,9 +112,10 @@ class Magento {
         let magentoRoot = await this.getMagentoRootUri();
         let uri = this.appendUri(magentoRoot, 'app', 'code');
         try {
-            fs.stat(uri);
+            await fs.stat(uri);
             return uri;
-        } catch {
+        } catch(e) {
+            output.log('Error trying to stat /app/code:', e.message);
             throw new Error('There is no Magento app/code/ folder in this workspace folder');
         }
     }
@@ -127,9 +130,10 @@ class Magento {
         let magentoRoot = await this.getMagentoRootUri();
         let uri = this.appendUri(magentoRoot, 'app', 'design');
         try {
-            fs.stat(uri);
+            await fs.stat(uri);
             return uri;
-        } catch {
+        } catch(e) {
+            output.log('Error trying to stat /app/design:', e.message);
             throw new Error('There is no Magento app/design folder in this workspace folder');
         }
     }
