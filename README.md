@@ -10,13 +10,13 @@ This extension will ease life of the Magento 2 developer by automating some repe
 
 ## Features
 
-- When you create new file (for example di.xml), extension provides handy default content for it. Works for some xml file, blocks, models, controllers, setup scripts, etc.
-- Creating new extension using `MagentoWizard: Create a new extension` command:
+- When you create a new file (for example di.xml), extension provides handy default content for it. Works for some xml files, blocks, models, controllers, setup scripts, etc.
+- Creating a new extension using `MagentoWizard: Create a new extension` command:
 
 ![Creating new extension](https://github.com/viperet/vscode-magento-wizard/raw/master/images/create_extension.gif)
 
-- When editing class file you can inject new dependency by pressing `F1` and using `MagentoWizard: Inject Dependency` command.
-Start typing `\Vendor\ExtensionName\` to get list of classes from that extension.
+- When editing a class file you can inject new dependency by pressing `F1` and using `MagentoWizard: Inject Dependency` command.
+Start typing `\Vendor\ExtensionName\` to get a list of classes from that extension.
 
 ![Dependency Injection ](https://github.com/viperet/vscode-magento-wizard/raw/master/images/dependency-injection.gif)
 
@@ -47,8 +47,8 @@ Start typing `\Vendor\ExtensionName\` to get list of classes from that extension
 ## Contributions
 
 This project is open for all kinds of contributions - new templates, new ideas, bug reports, new features, etc.
-If you found bug or want to request a new feature - just create new issue on github. If you want to add new feature yourself -
-fork this repo and create pull request.
+If you found a bug or want to request a new feature - just create a new issue on github. If you want to add a new feature yourself -
+fork this repo and create a pull request.
 
 ## Release Notes
 
