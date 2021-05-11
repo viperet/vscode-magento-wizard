@@ -152,7 +152,7 @@
         "@types/node": "^10.17.46",
         "@types/vscode": "^1.45.0",
         "glob": "^7.1.6",
-        "handlebars": "^4.7.6",
+        "handlebars": "^4.7.7",
         "mocha": "^6.2.3",
         "ts-loader": "^6.2.2",
         "tslint": "^5.20.1",
