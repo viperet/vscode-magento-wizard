@@ -166,7 +166,7 @@
         "@types/semver": "^7.3.4",
         "case": "^1.6.3",
         "delay": "^4.4.0",
-        "lodash": "^4.17.20",
+        "lodash": "^4.17.21",
         "node-cache": "^5.1.2",
         "p-progress": "^0.4.2",
         "php-parser": "^3.0.2",
