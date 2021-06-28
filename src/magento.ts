@@ -3,10 +3,10 @@ import * as path  from 'path';
 import classList from './classList';
 import eventsList from './eventsList';
 import * as Case from 'case';
-import * as convert  from 'xml-js';
 import * as NodeCache from 'node-cache';
 import * as cp from 'child_process';
 import * as output from './output';
+import * as minimatch from 'minimatch';
 const fs = workspace.fs;
 
 import { TextEncoder, TextDecoder } from 'util';
@@ -220,6 +220,13 @@ class Magento {
             // File is not empty, stop processing
             return;
         }
+        const config = workspace.getConfiguration('magentoWizard', textDocument.uri);
+        let globPattern: string = config.get('autoTemplates') || '**/*';
+        if (! minimatch(textDocument.uri.path, globPattern)) {
+            output.log(`Skipping auto template for "${textDocument.uri.path}" because it doesn't match pattern "${globPattern}" from magentoWizard.autoTemplate option.`);
+            return;
+        }
+
         try {
             var data = await this.getUriData(textDocument.uri);
         } catch {
