@@ -221,8 +221,8 @@ class Magento {
             return;
         }
         const config = workspace.getConfiguration('magentoWizard', textDocument.uri);
-        let globPattern: string = config.get('autoTemplates') || '**/*';
-        if (! minimatch(textDocument.uri.path, globPattern)) {
+        let globPattern: string = config.get('autoTemplates') || '';
+        if (globPattern.trim() === '' && ! minimatch(textDocument.uri.path, globPattern)) {
             output.log(`Skipping auto template for "${textDocument.uri.path}" because it doesn't match pattern "${globPattern}" from magentoWizard.autoTemplate option.`);
             return;
         }
