@@ -6,11 +6,11 @@
 ![Visual Studio Marketplace Rating](https://img.shields.io/visual-studio-marketplace/r/viperet.vscode-magento-wizard)
 ![Visual Studio Marketplace Rating (Stars)](https://img.shields.io/visual-studio-marketplace/stars/viperet.vscode-magento-wizard)
 
-This extension will ease life of the Magento 2 developer by automating some repeating tasks.
+This extension will ease the life of the Magento 2 developer by automating some repeating tasks.
 
 ## Features
 
-- When you create a new file (for example di.xml), extension provides handy default content for it. Works for some xml files, blocks, models, controllers, setup scripts, etc.
+- When you create a new file (for example - di.xml), the extension provides handy default content for it. Works for some XML files, blocks, models, controllers, setup scripts, etc.
 - Creating a new extension using `MagentoWizard: Create a new extension` command:
 
 ![Creating new extension](https://github.com/viperet/vscode-magento-wizard/raw/master/images/create_extension.gif)
@@ -41,16 +41,21 @@ Start typing `\Vendor\ExtensionName\` to get a list of classes from that extensi
 - [ ] Adding custom attribute to products, categories, orders, customers, etc.
 - [x] Add Magento tasks like setup:upgrade, cache:clean to VSC tasks
 - [ ] Watch for changes in *.xml, *.phtml, *.php and clear corresponding cache type (like [magento-cache-clean](https://github.com/mage2tv/magento-cache-clean) extension)
-- [x] Go to definition function for class and template referrences in *.xml files
+- [x] Go to definition function for class and template references in *.xml files
 - [ ] More templates
 
 ## Contributions
 
 This project is open for all kinds of contributions - new templates, new ideas, bug reports, new features, etc.
-If you found a bug or want to request a new feature - just create a new issue on github. If you want to add a new feature yourself -
+If you found a bug or want to request a new feature - just create a new issue on GitHub. If you want to add a new feature yourself -
 fork this repo and create a pull request.
 
 ## Release Notes
+
+### 2.4.4
+
+Added indexing of templates, added a command to quickly switch between block and template files.
+Added an option to disable auto templates for some files.
 
 ### 2.4.0
 
