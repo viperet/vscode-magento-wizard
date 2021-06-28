@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import createQuickPickCustom, { QuickPickCustomOptons } from './quickPickCustom';
 import createWorkspacePick from './workspaceFolderPick';
-import magento, { ExtensionInfo, ExtentionKind }  from './magento';
+import magento, { ExtensionInfo, ExtentionKind, UriData }  from './magento';
 import createExtension from './actions/createExtension';
 import injectDependency from './actions/injectDependency';
 import addObserver from './actions/addObserver';
@@ -12,11 +12,12 @@ import Php, { ClassMethod, MethodVisibility } from './php';
 import { MagentoTaskProvider } from './actions/magentoTaskProvider';
 import { definitionProvider } from './actions/definitionProvider';
 import { completionProvider } from './actions/completionProvider';
-import Indexer from './indexer';
+import Indexer, { BlockData } from './indexer';
 import * as output from './output';
 import * as Case from 'case';
 import * as _ from 'lodash';
 import * as semver from 'semver';
+import { window, workspace } from 'vscode';
 
 export function activate(context: vscode.ExtensionContext) {
 
@@ -350,6 +351,69 @@ export function activate(context: vscode.ExtensionContext) {
             }
         }));
 
+        context.subscriptions.push(vscode.commands.registerCommand('magentowizard.switchtoblocktemplate', async () => {
+            let textEditor = vscode.window.activeTextEditor;
+            if (textEditor) {
+                let extensionData;
+                extensionData = await magento.getUriData(textEditor.document.uri);
+                if (extensionData) {
+                    if (extensionData.type === 'Block') {
+                        // from Block to template
+                        let blocks = [];
+                        for(let block of magento.getIndexer().paths.blocks) {
+                            if (`${extensionData.namespace}\\${extensionData.name}` === block.className) {
+                                blocks.push(block.fullTemplateName);
+
+                            }
+                        }
+                        let templateName:string | undefined;
+                        blocks = _.uniq(blocks);
+                        if (blocks.length > 1) {
+                            templateName = await createQuickPickCustom(blocks, { title: 'Please select template' });
+                        } else if (blocks.length > 0) {
+                            templateName = blocks[0];
+                        } else {
+                            window.showInformationMessage('Can\'t find a template for this block');
+                        }
+                        if (templateName) {
+                            let templateUri = await magento.getViewFile(extensionData, templateName);
+                            if (templateUri) {
+                                await window.showTextDocument(templateUri);
+                            } else {
+                                window.showInformationMessage('Can\'t find template '+templateName);
+                            }
+                        }
+                    } else if (extensionData.type === 'view' && extensionData.ext === 'phtml') {
+                        // from template to Block
+                        let blocks = [];
+                        for(let block of magento.getIndexer().paths.blocks) {
+                            let templateUri = await magento.getViewFile(extensionData, block.fullTemplateName);
+                            if (templateUri && templateUri.fsPath === textEditor.document.uri.fsPath) {
+                                blocks.push(block.className);
+                            }
+                        }
+                        blocks = _.uniq(blocks);
+                        let className:string | undefined;
+                        if (blocks.length > 1) {
+                            className = await createQuickPickCustom(blocks, { title: 'Please select Block' });
+                        } else if (blocks.length > 0) {
+                            className = blocks[0];
+                        } else {
+                            window.showInformationMessage('Can\'t find a block for this template');
+                        }
+                        if (className) {
+                            let classUri = await magento.getClassFile(className);
+                            if (classUri) {
+                                await window.showTextDocument(classUri);
+                            } else {
+                                window.showInformationMessage('Can\'t find block '+className);
+                            }
+                        }
+                    }
+                }
+            }
+        }));
+
         let lastOpenedDocument: vscode.TextDocument | undefined;
         context.subscriptions.push(vscode.workspace.onDidOpenTextDocument(textDocument => {
             lastOpenedDocument = textDocument;
@@ -365,6 +429,22 @@ export function activate(context: vscode.ExtensionContext) {
                 console.error(e);
             }
         }));
+
+        window.onDidChangeActiveTextEditor(async (editor) => {
+            if (editor) {
+                var data = await magento.getUriData(editor.document.uri);
+                if (data) {
+                    vscode.commands.executeCommand('setContext', 'magentowizard.activeEditor.Type', data.type);
+                    vscode.commands.executeCommand('setContext', 'magentowizard.activeEditor.Ext', data.ext);
+                    vscode.commands.executeCommand('setContext', 'magentowizard.activeEditor.Area', data.area);
+                    output.log('Context changed', data.type);
+                    return;
+                }
+            }
+            vscode.commands.executeCommand('setContext', 'magentowizard.activeEditor.Type', false);
+            vscode.commands.executeCommand('setContext', 'magentowizard.activeEditor.Ext', false);
+            vscode.commands.executeCommand('setContext', 'magentowizard.activeEditor.Area', false);
+});
 
         context.subscriptions.push(vscode.languages.registerDefinitionProvider([
             {language: 'xml', scheme: 'file'},

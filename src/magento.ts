@@ -167,6 +167,8 @@ class Magento {
         data.type = pathComponents.length > 0 ? pathComponents[0] : '';
         if (data.type === 'view') {
             data.area = pathComponents.length > 1 ? pathComponents[1] : '';
+        } else if (data.type === 'Block') {
+            data.area = pathComponents.length > 1 && pathComponents[1] === 'Adminhtml' ? 'adminhtml' : 'frontend';
         }
         return data;
     }
@@ -631,8 +633,11 @@ class Magento {
                     return undefined;
                 }
 
-
-                if (data.type === 'view' && data.ext === 'xml') {
+                if (
+                    (data.type === 'view' && data.ext === 'xml') ||
+                    (data.type === 'view' && data.ext === 'phtml') ||
+                    (data.type === 'Block' && data.ext === 'php')
+                ) {
                     // file is XML layout
                     let fileType;
                     if (matches.groups.ext === 'phtml') {

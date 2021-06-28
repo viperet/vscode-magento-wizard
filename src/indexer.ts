@@ -20,7 +20,7 @@ interface RegistrationData {
     registrations: { [registration: string]: number };
 }
 
-interface BlockData {
+export interface BlockData {
     name: string;
     uri: Uri;
     filename: string;
@@ -31,6 +31,7 @@ interface BlockData {
     componentName: string;
     className: string;
     templateName: string;
+    fullTemplateName: string;
 }
 
 export default class Indexer {
@@ -185,7 +186,7 @@ export default class Indexer {
             if (lines.length > 0) {
                 output.log(lines[0]);
             }
-            
+
             const files = await workspace.findFiles(new RelativePattern(magentoRoot.fsPath, '**/{app,vendor}/**/registration.php'), '**/tests/**');
             const registrations =  PProgress.all(files.map(file => this.register.bind(this, file)), { concurrency: 5});
             registrations.onProgress(progress => status.text = statusText+Math.round(progress*100)+'%');
@@ -356,6 +357,7 @@ export default class Indexer {
             let name: string | undefined;
             let className: string | undefined;
             let templateName: string | undefined;
+            let fullTemplateName: string = '';
             if (node.attributes) {
                 for (const attribute of node.attributes) {
                     switch(attribute.tag) {
@@ -364,6 +366,12 @@ export default class Indexer {
                         case 'template': templateName = attribute.text; break;
                     }
                 }
+            }
+            if (templateName && templateName.match(/^.+::.+$/)) {
+                fullTemplateName = templateName;
+                templateName = templateName.split('::')[1];
+            } else {
+                fullTemplateName = `${componentName}::${templateName}`;
             }
             if (name) {
                 blocks.push({
@@ -377,6 +385,7 @@ export default class Indexer {
                     componentName,
                     className: className || '',
                     templateName: templateName || '',
+                    fullTemplateName,
                 });
             }
         }
