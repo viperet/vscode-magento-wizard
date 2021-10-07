@@ -217,7 +217,7 @@ class Magento {
     async applyTemplate(textEditor: TextEditor): Promise<void> {
         const textDocument = textEditor.document;
         if (textDocument.getText().length !== 0) {
-            // File is not empty, stop processing
+            output.log(`File ${textDocument.uri.path} is not empty, not adding any template content`);
             return;
         }
         const config = workspace.getConfiguration('magentoWizard', textDocument.uri);
@@ -231,10 +231,12 @@ class Magento {
             var data = await this.getUriData(textDocument.uri);
         } catch {
             // getUriData may fail for files not in the worspace folders, no need to continue
+            output.log(`File ${textDocument.uri.path} is not in the workspace, not adding any template content`);
             return;
         }
         if (!data || !data.vendor || !data.extension) {
             // File is not in the Magento 2 extension
+            output.log(`File ${textDocument.uri.path} is not in the Magento 2 extension folder, not adding any template content`);
             return;
         }
         let modelMatch = data.namespace.match(/\\ResourceModel\\(?<modelName>.+)$/);
@@ -249,9 +251,11 @@ class Magento {
                 templateText = templateText.replace(/(\$[^{\d])/g, '\\$1');
                 const snippet = new SnippetString(templateText);
                 textEditor.insertSnippet(snippet);
-                break;
+                output.log(`Added template content for ${textDocument.uri.path}`);
+                return;
             }
         }
+        output.log(`No template content found for ${textDocument.uri.path}`);
     }
 
     async createWithTemplate(file: Uri, template:CallableFunction, data?: any): Promise<void> {
