@@ -60,7 +60,7 @@ export default async function (context: ExtensionContext, workspaceFolder: Works
     } else {
         // generate catalog file using bin/magento
         const taskProvider = new MagentoTaskProvider(workspaceFolder);
-        const catalogTask = taskProvider.getTask('dev:urn-catalog:generate', [catalogOldUri.fsPath]);
+        const catalogTask = await taskProvider.getTask('dev:urn-catalog:generate', [catalogOldUri.fsPath]);
         let taskExecution: TaskExecution;
         let token = tasks.onDidEndTask(async endTask => {
             if (endTask.execution === taskExecution) {
@@ -149,4 +149,3 @@ export default async function (context: ExtensionContext, workspaceFolder: Works
     }
 
 }
-

@@ -36,7 +36,7 @@ export class MagentoTaskProvider implements vscode.TaskProvider {
         return this.getTasks();
     }
 
-    public resolveTask(_task: vscode.Task): vscode.Task | undefined {
+    public async resolveTask(_task: vscode.Task): Promise<vscode.Task | undefined> {
         const command: string = _task.definition.command;
         if (command) {
             const definition: MagentoTaskDefinition = <any>_task.definition;
@@ -54,11 +54,16 @@ export class MagentoTaskProvider implements vscode.TaskProvider {
         }
         let magentoRoot = await magento.indexer[this.folder].magentoRoot;
 
-        if (!magentoRoot || !await magento.fileExists(magento.appendUri(magentoRoot, 'bin/magento'))) {
+        if (!magentoRoot) {
+            // magento root not found and not configured
+            return [];
+        }
+        let binMagento = magento.appendUri(magentoRoot, 'bin/magento');
+        if (!await magento.fileExists(binMagento)) {
             // if there is no bin/magento in this workspace folder - return no tasks
             return [];
         }
-        let commandLine = (this.user ? `sudo -u ${this.user} ` : '') + `${this.php} bin/magento --no-ansi`;
+        let commandLine = (this.user ? `sudo -u ${this.user} ` : '') + `${this.php} ${binMagento.fsPath} --no-ansi`;
         this.tasks = [];
 
         try {
@@ -78,7 +83,7 @@ export class MagentoTaskProvider implements vscode.TaskProvider {
                     if (matchCommands) {
                         let matches = line.match(/^\s\s(?<command>.*?)\s/);
                         if (matches && matches.groups) {
-                            this.tasks!.push(this.getTask(matches.groups.command, []));
+                            this.tasks!.push(await this.getTask(matches.groups.command, []));
                         }
                     }
                 }
@@ -100,7 +105,7 @@ export class MagentoTaskProvider implements vscode.TaskProvider {
         return this.tasks;
     }
 
-    public getTask(command: string, args: string[], definition?: MagentoTaskDefinition): vscode.Task {
+    public async getTask(command: string, args: string[], definition?: MagentoTaskDefinition): Promise<vscode.Task> {
         if (definition === undefined) {
             definition = {
                 type: MagentoTaskProvider.MagentoScriptType,
@@ -110,8 +115,11 @@ export class MagentoTaskProvider implements vscode.TaskProvider {
             };
         }
         this.readConfig();
+        let magentoRoot = await magento.indexer[this.folder].magentoRoot;
+        let binMagento = magentoRoot? magento.appendUri(magentoRoot, 'bin/magento').fsPath : 'bin/magento';
+
         args = args.map(arg => arg.replace(/(["\s'$`\\])/, '\\$1'));
-        const commandLine = (this.user ? `sudo -u ${this.user} ` : '') + `${this.php} bin/magento ${command} ${args.join(' ')}`;
+        const commandLine = (this.user ? `sudo -u ${this.user} ` : '') + `${this.php} ${binMagento} ${command} ${args.join(' ')}`;
         const task = new vscode.Task(
             definition,
             this.workspaceFolder,
@@ -131,7 +139,7 @@ export class MagentoTaskProvider implements vscode.TaskProvider {
         const config = vscode.workspace.getConfiguration('', this.workspaceFolder.uri);
         this.php = config.get('magentoWizard.tasks.php') || 'php';
         this.user = config.get('magentoWizard.tasks.user') || '';
-        
+
         this.enabled = config.get('magentoWizard.tasks.provider') || false;
     }
 }
