@@ -46,7 +46,7 @@ const classList: {[eventName: string]: EventDescription } = {
     "adminhtml_block_html_before": {
         "description": "",
         "data": {
-            "block": "\\Magento\\Backend\\Block\\Widget\\Button"
+            "block": "\\Magento\\Backend\\Block\\Template"
         }
     },
     "adminhtml_catalog_category_tree_can_add_root_category": {
@@ -219,7 +219,7 @@ const classList: {[eventName: string]: EventDescription } = {
     "clean_cache_by_tags": {
         "description": "",
         "data": {
-            "object": "\\Magento\\Theme\\Model\\Theme"
+            "object": "\\Magento\\Framework\\Model\\AbstractModel"
         }
     },
     "cms_block_collection_load_after": {
@@ -374,6 +374,13 @@ const classList: {[eventName: string]: EventDescription } = {
         "data": {
             "controller_action": "\\Magento\\Review\\Controller\\Product\\ListAjax",
             "request": "\\Magento\\Framework\\App\\Request\\Http"
+        }
+    },
+    "controller_action_noroute": {
+        "description": "",
+        "data": {
+            "action": "\\Magento\Framework\Controller\Noroute\\Index",
+            "status": "\\Magento\\Framework\\DataObject"
         }
     },
     "controller_action_predispatch": {
@@ -584,6 +591,13 @@ const classList: {[eventName: string]: EventDescription } = {
         "data": {
             "controller_action": "\\Magento\\Sales\\Controller\\Adminhtml\\Order\\View",
             "request": "\\Magento\\Framework\\App\\Request\\Http"
+        }
+    },
+    "controller_front_send_response_before": {
+        "description": "",
+        "data": {
+            "request": "\\Magento\\Framework\\App\\Request\\Http",
+            "response": "\\Magento\\Framework\\App\\Response\\Http"
         }
     },
     "core_abstract_load_after": {
@@ -859,13 +873,13 @@ const classList: {[eventName: string]: EventDescription } = {
     "model_load_after": {
         "description": "",
         "data": {
-            "object": "\\Magento\\Indexer\\Model\\Indexer\\State"
+            "object": "\\Magento\\Framework\\Model\\AbstractModel"
         }
     },
     "model_load_before": {
         "description": "",
         "data": {
-            "object": "\\Magento\\Indexer\\Model\\Indexer\\State",
+            "object": "\\Magento\\Framework\\Model\\AbstractModel",
             "field": "string",
             "value": "string"
         }
@@ -873,19 +887,37 @@ const classList: {[eventName: string]: EventDescription } = {
     "model_save_after": {
         "description": "",
         "data": {
-            "object": "\\Magento\\Theme\\Model\\Theme"
+            "object": "\\Magento\\Framework\\Model\\AbstractModel"
         }
     },
     "model_save_before": {
         "description": "",
         "data": {
-            "object": "\\Magento\\Theme\\Model\\Theme"
+            "object": "\\Magento\\Framework\\Model\\AbstractModel"
         }
     },
     "model_save_commit_after": {
         "description": "",
         "data": {
-            "object": "\\Magento\\Theme\\Model\\Theme"
+            "object": "\\Magento\\Framework\\Model\\AbstractModel"
+        }
+    },
+    "model_delete_before": {
+        "description": "",
+        "data": {
+            "object": "\\Magento\\Framework\\Model\\AbstractModel"
+        }
+    },
+    "model_delete_after": {
+        "description": "",
+        "data": {
+            "object": "\\Magento\\Framework\\Model\\AbstractModel"
+        }
+    },
+    "model_delete_commit_after": {
+        "description": "",
+        "data": {
+            "object": "\\Magento\\Framework\\Model\\AbstractModel"
         }
     },
     "page_block_html_topmenu_gethtml_after": {
@@ -1032,6 +1064,12 @@ const classList: {[eventName: string]: EventDescription } = {
             "order": "\\Magento\\Sales\\Model\\Order"
         }
     },
+    "sales_order_save_before": {
+        "description": "Fires during checkout before order is saved to DB",
+        "data": {
+            "order": "\\Magento\\Sales\\Model\\Order"
+        }
+    },
     "sales_order_payment_collection_load_after": {
         "description": "",
         "data": {
@@ -1095,6 +1133,24 @@ const classList: {[eventName: string]: EventDescription } = {
         "data": {
             "data_object": "\\Magento\\Quote\\Model\\Quote",
             "quote": "\\Magento\\Quote\\Model\\Quote"
+        }
+    },
+    "sales_quote_remove_item": {
+        "description": "",
+        "data": {
+            "quote_item": "\\Magento\\Quote\\Model\\Quote\\Item",
+        }
+    },
+    "sales_quote_add_item": {
+        "description": "",
+        "data": {
+            "quote_item": "\\Magento\\Quote\\Model\\Quote\\Item",
+        }
+    },
+    "sales_quote_product_add_after": {
+        "description": "",
+        "data": {
+            "items": "\\Magento\\Quote\\Model\\Quote\\Item[]",
         }
     },
     "search_query_load_after": {
