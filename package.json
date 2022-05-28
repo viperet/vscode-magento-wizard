@@ -11,7 +11,7 @@
     "publisher": "viperet",
     "displayName": "MagentoWizard",
     "description": "Will ease life of the Magento 2 developer by automating some repeating tasks, like injecting dependency",
-    "version": "2.4.8",
+    "version": "2.5.0",
     "extensionKind": [
         "workspace"
     ],
@@ -120,6 +120,11 @@
                 "title": "Switch to Block/Template",
                 "enablement": "editorLangId == php",
                 "category": "MagentoWizard"
+            },
+            {
+                "command": "magentowizard.copyPath",
+                "title": "Copy Magento Path",
+                "category": "MagentoWizard"
             }
         ],
         "taskDefinitions": [
@@ -156,7 +161,16 @@
                     "message": 1
                 }
             }
-        ]
+        ],
+        "menus": {
+            "explorer/context": [
+                {
+                    "command": "magentowizard.copyPath",
+                    "when": "resourcePath =~ /\/app\/design\// || resourcePath =~ /\/view\/(adminhtml|frontend|base)\/(web|templates)\// && resourceExtname in magentowizard.supportedCopyPathExt",
+                    "group": "6_copypath"
+                }
+            ]
+        }
     },
     "scripts": {
         "_vscode:prepublish": "npm run compile",

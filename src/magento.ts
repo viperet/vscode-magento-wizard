@@ -732,6 +732,106 @@ class Magento {
         return undefined;
     }
 
+    async getLinks(uris: Uri[]): Promise<String[]> {
+        let values:String[] = [];
+        for (let i = 0; i < uris.length; i++) {
+            let extensionData = await this.getUriData(uris[i]);
+            if (!extensionData) {
+                // no info about extension
+                continue;
+            }
+            let magentoComponent;
+            let magentoPath;
+            if (extensionData.kind == ExtentionKind.Theme) {
+                magentoPath = path.relative(`${extensionData.extensionFolder}${extensionData.type}/`, uris[i].fsPath)
+                if (extensionData.type == 'web') {
+                    // in theme's /web/ folder
+                    values.push(`${magentoPath}`);
+                    continue;
+                } else if (extensionData.type.match(/^.+_.+$/)) {
+                    // in themes /Vendor_Extension/ folder
+                    magentoComponent = extensionData.type;
+                    switch(extensionData.ext) {
+                        case 'js':
+                            magentoPath = path.relative(`${extensionData.extensionFolder}${extensionData.type}/js/`, uris[i].fsPath)
+                            break;
+                        case 'css':
+                            magentoPath = path.relative(`${extensionData.extensionFolder}${extensionData.type}/css/`, uris[i].fsPath)
+                            break;
+                        case 'html':
+                        case 'phtml':
+                            magentoPath = path.relative(`${extensionData.extensionFolder}${extensionData.type}/templates/`, uris[i].fsPath)
+                            break;
+                        case 'eot':
+                        case 'svg':
+                        case 'ttf':
+                        case 'woff':
+                        case 'woff2':
+                            magentoPath = path.relative(`${extensionData.extensionFolder}${extensionData.type}/fonts/`, uris[i].fsPath)
+                            break;
+                        default:
+                            magentoPath = path.relative(`${extensionData.extensionFolder}${extensionData.type}/images/`, uris[i].fsPath)
+                            continue;
+                    }
+                } else {
+                    continue;
+                }
+            } else if (extensionData.kind == ExtentionKind.Module) {
+                magentoComponent = extensionData.componentName;
+                if (extensionData.type == 'view') {
+                    switch(extensionData.ext) {
+                        case 'js':
+                            magentoPath = path.relative(`${extensionData.extensionFolder}view/${extensionData.area}/web/`, uris[i].fsPath)
+                            if (!magentoPath || magentoPath.startsWith('..')) {
+                                continue;
+                            }
+                            magentoPath = magentoPath.replace(/\.js$/, ''); // remove extension
+                            values.push(`${magentoComponent}/${magentoPath}`);
+                            continue;
+                        case 'html':
+                            magentoPath = path.relative(`${extensionData.extensionFolder}view/${extensionData.area}/web/template/`, uris[i].fsPath)
+                            if (!magentoPath || magentoPath.startsWith('..')) {
+                                continue;
+                            }
+                            magentoPath = magentoPath.replace(/\.html/, ''); // remove extension
+                            values.push(`${magentoComponent}/${magentoPath}`);
+                            continue;
+                        case 'phtml':
+                            magentoPath = path.relative(`${extensionData.extensionFolder}view/${extensionData.area}/templates/`, uris[i].fsPath)
+                            break;
+                        case 'jpg':
+                        case 'jpeg':
+                        case 'png':
+                        case 'gif':
+                        case 'svg':
+                            magentoPath = path.relative(`${extensionData.extensionFolder}view/${extensionData.area}/web/`, uris[i].fsPath)
+                            break;
+                        default:
+                            continue;
+                    }
+
+                } else {
+                    switch(extensionData.ext) {
+                        case 'js':
+                        case 'css':
+                            magentoPath = path.relative(`${extensionData.extensionFolder}web/`, uris[i].fsPath)
+                            break;
+                        case 'phtml':
+                            magentoPath = path.relative(`${extensionData.extensionFolder}view/${extensionData.area}/templates/`, uris[i].fsPath)
+                            break;
+                        default:
+                            continue;
+                    }
+                }
+            }
+            if (!magentoPath || magentoPath.startsWith('..')) {
+                continue;
+            }
+            values.push(`${magentoComponent}::${magentoPath}`);
+        }
+        return values;
+    }
+
 }
 
 export default new Magento();

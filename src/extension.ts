@@ -17,7 +17,8 @@ import * as output from './output';
 import * as Case from 'case';
 import * as _ from 'lodash';
 import * as semver from 'semver';
-import { window, workspace } from 'vscode';
+import { window } from 'vscode';
+import * as path  from 'path';
 
 export function activate(context: vscode.ExtensionContext) {
 
@@ -413,6 +414,33 @@ export function activate(context: vscode.ExtensionContext) {
                 }
             }
         }));
+
+        context.subscriptions.push(vscode.commands.registerCommand('magentowizard.copyPath', async (clickedFile: vscode.Uri, selectedFiles: vscode.Uri[]) => {
+            const uris = selectedFiles || (clickedFile ? [clickedFile] : 0) || (vscode.window.activeTextEditor ? [vscode.window.activeTextEditor.document.uri] : []);
+            let values:String[] = await magento.getLinks(uris);
+            if (values.length > 0) {
+                vscode.env.clipboard.writeText(values.join('\n'));
+            } else {
+                vscode.window.showInformationMessage("Can't copy Magent link for this file");
+            }
+        }));
+
+        vscode.commands.executeCommand('setContext', 'magentowizard.supportedCopyPathExt', [
+            '.js',
+            '.css',
+            '.phtml',
+            '.html',
+            '.jpg',
+            '.jpeg',
+            '.svg',
+            '.png',
+            '.gif',
+            '.eot',
+            '.svg',
+            '.ttf',
+            '.woff',
+            '.woff2',
+        ]);
 
         let lastOpenedDocument: vscode.TextDocument | undefined;
         context.subscriptions.push(vscode.workspace.onDidOpenTextDocument(textDocument => {

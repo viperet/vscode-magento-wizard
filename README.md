@@ -26,6 +26,7 @@ Start typing `\Vendor\ExtensionName\` to get a list of classes from that extensi
 - Generation of [XML Catalog](https://en.wikipedia.org/wiki/XML_catalog) file for Magento 2 XML DTD files. Run `MagentoWizard: Generate XML Catalog` command and extension will create XML Catalog file in the correct format. It will be added to the [XML](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-xml) extension config if that extension is installed.
 - `Go to Definition` function for class names and template names in XML Layouts.
 - Autocompletion of the class and template names in XML layouts and configurations. More autocompletions would be added soon, stay tuned.
+- `Copy Magento Path` Exporer context menu command, allows to copy Magento path for various files in /view/ folder.
 
 ### Planned features
 
@@ -51,6 +52,10 @@ If you found a bug or want to request a new feature - just create a new issue on
 fork this repo and create a pull request.
 
 ## Release Notes
+
+### 2.5.0
+
+`Copy Magento Path` Explorer context menu command was added.
 
 ### 2.4.4
 
