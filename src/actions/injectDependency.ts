@@ -113,7 +113,7 @@ export default async function (textEditor: TextEditor, className: string, varNam
         pos = constructorNode.loc.start;
     }
     let indent = magento.indentCode(textEditor, 1);
-    var docblock = magento.docblock(textEditor, { params: [['@param', className]] });
+    var docblock = magento.docblock(textEditor, { params: [['@var', className]] });
     inserts.push({
         line: pos.line-1,
         column: 0,
