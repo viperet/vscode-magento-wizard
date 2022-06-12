@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Webapi:etc/webapi.xsd">
     <route url="/V1/${1:action}/:${2:argument}" method="${3|GET,POST,PUT,DELETE|}">
-        <service class="{{vendor}}\\{{extension}}\Api\\${4:actionInterface}" method="${5:methodName}"/>
+        <service class="{{vendor}}\\{{extension}}\Api\\${4:ActionInterface}" method="${5:methodName}"/>
         <resources>
             <resource ref="${6|anonymous,self|}"/>
         </resources>
