@@ -11,7 +11,7 @@
     "publisher": "viperet",
     "displayName": "MagentoWizard",
     "description": "Will ease life of the Magento 2 developer by automating some repeating tasks, like injecting dependency",
-    "version": "2.5.0",
+    "version": "2.5.1",
     "extensionKind": [
         "workspace"
     ],
@@ -166,7 +166,7 @@
             "explorer/context": [
                 {
                     "command": "magentowizard.copyPath",
-                    "when": "resourcePath =~ /\/app\/design\// || resourcePath =~ /\/view\/(adminhtml|frontend|base)\/(web|templates)\// && resourceExtname in magentowizard.supportedCopyPathExt",
+                    "when": "resourcePath =~ //app/design// || resourcePath =~ //view/(adminhtml|frontend|base)/(web|templates)// && resourceExtname in magentowizard.supportedCopyPathExt",
                     "group": "6_copypath"
                 }
             ]
