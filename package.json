@@ -188,7 +188,7 @@
         "@types/mocha": "^5.2.6",
         "@types/node": "^10.17.46",
         "@types/vscode": "^1.45.0",
-        "glob-parent": ">=5.1.2",
+        "glob-parent": ">=6.0.1",
         "handlebars": "^4.7.7",
         "mocha": "^6.2.3",
         "ts-loader": "^6.2.2",
