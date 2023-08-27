@@ -32,6 +32,7 @@ const templates: { [key: string]: string } = {
     '\/Setup\/Recurring\.php$': require('../templates/Setup/Recurring.php'),
     '\/Setup\/UpgradeData\.php$': require('../templates/Setup/UpgradeData.php'),
     '\/Setup\/UpgradeSchema\.php$': require('../templates/Setup/UpgradeSchema.php'),
+    '\/Setup\/Patch\/Data\/.*\.php$': require('../templates/Setup/Patch/Data/patch.php'),
     'Interface\.php$': require('../templates/interface.php'),
     '.php$': require('../templates/class.php'),
 };
