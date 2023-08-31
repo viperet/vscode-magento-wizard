@@ -1,24 +1,29 @@
 <?php
 namespace {{ namespace }};
 
-class {{ name }} extends \Magento\Framework\App\Action\Action
+use Magento\Framework\App\ActionInterface;
+use Magento\Framework\App\Action\HttpGetActionInterface;
+use Magento\Framework\App\RequestInterface;
+use Magento\Framework\View\Result\PageFactory;
+
+class {{ name }} implements HttpGetActionInterface
 {
     /**
-     * @var \Magento\Framework\View\Result\PageFactory
+     * @var PageFactory
      */
-    protected $_pageFactory;
+    private $pageFactory;
 
     /**
-     * @param \Magento\Framework\App\Action\Context $context
+     * @var RequestInterface
      */
-    public function __construct(
-       \Magento\Framework\App\Action\Context $context,
-       \Magento\Framework\View\Result\PageFactory $pageFactory
-    )
+    private $request;
+
+    public function __construct(PageFactory $pageFactory, RequestInterface $request)
     {
-        $this->_pageFactory = $pageFactory;
-        return parent::__construct($context);
+        $this->pageFactory = $pageFactory;
+        $this->request = $request;
     }
+
     /**
      * View page action
      *
@@ -26,6 +31,6 @@ class {{ name }} extends \Magento\Framework\App\Action\Action
      */
     public function execute()
     {
-        return $this->_pageFactory->create();
+        return $this->pageFactory->create();
     }
 }
