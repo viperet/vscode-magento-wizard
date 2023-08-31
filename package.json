@@ -207,7 +207,7 @@
         "delay": "^4.4.0",
         "glob": "^7.1.6",
         "lodash": "^4.17.21",
-        "minimatch": "^3.0.4",
+        "minimatch": "^4.0.0",
         "node-cache": "^5.1.2",
         "p-progress": "^0.4.2",
         "php-parser": "^3.1.5",
