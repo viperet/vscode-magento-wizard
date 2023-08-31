@@ -75,6 +75,8 @@ export default class Indexer {
             } else {
                 output.log(`No Magento root in '${workspaceFolder.name}' workspace folder (${workspaceFolder.uri.fsPath})`);
             }
+        }).catch(e => {
+            output.log('Error detecting Magento Root',e);
         });
     }
 

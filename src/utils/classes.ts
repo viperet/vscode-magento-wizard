@@ -30,10 +30,10 @@ fromDir(process.argv[2], /\.php$/, (filename) => {
     console.error('Processing  ' + filename);
     let contents = fs.readFileSync(filename, 'utf8');
 
-    ast.parseCode(contents, filename);
-    let className = path.basename(filename, '.php');
-    let classNode = ast.findClass(className);
     try {
+        ast.parseCode(contents, filename);
+        let className = path.basename(filename, '.php');
+        let classNode = ast.findClass(className);
         var aliases = ast.getAliases();
         if (classNode) {
             let constructorNode = ast.findConstructor(classNode);
@@ -42,7 +42,7 @@ fromDir(process.argv[2], /\.php$/, (filename) => {
                     if (arg.type && arg.type.kind === 'classreference') {
                         let argClassName = arg.type.name;
                         let classPath = argClassName.split('\\');
-                        if (arg.type.resolution !== 'fqn' && aliases[classPath[0]]) {
+                        if ((arg.type as any).resolution !== 'fqn' && aliases[classPath[0]]) {
                             classPath[0] = aliases[classPath[0]];
                             argClassName = classPath.join('\\');
                         }
@@ -57,7 +57,15 @@ fromDir(process.argv[2], /\.php$/, (filename) => {
                         }
                     }
                 }
+            } else {
+                if(constructorNode) {
+                    console.log(`No arguments in constructor in ${filename}`);
+                } else {
+                    console.log(`No constructor in ${filename}`);
+                }
             }
+        } else {
+            console.log(`No class ${className} in ${filename}`);
         }
     } catch(e) {
         console.error(`Error in ${filename}: `, e);

@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import Engine, { Program, Block, Node, Method, Reference } from 'php-parser';
+import {Engine, Program, Block, Node, Method, Reference, Class, Identifier, Interface, Name } from 'php-parser';
 
 export enum MethodVisibility { public, private, protected }
 export interface MethodParameter {
@@ -72,7 +72,7 @@ class Php {
         return aliases;
     }
 
-    resolveType(type: Reference): string {
+    resolveType(type: Name): string {
         if (!this.aliases) {
             this.aliases = this.getAliases();
         }
@@ -93,12 +93,12 @@ class Php {
      * @returns {(Node | null)}
      * @memberof Php
      */
-    findClass(className: string, block?: Block | Node): Node | null {
+    findClass(className: string, block?: Block | Node): Class | null {
         if (!block) {
             block = this.ast!;
         }
-        if (block.kind === 'class' &&  block.name && block.name.name === className) {
-            return block;
+        if (block.kind === 'class' && (block as Class).name && ((block as Class).name as Identifier).name === className) {
+            return block as Class;
         } else if ('children' in block && (block.kind === 'program' || block.kind === 'namespace')) {
             for(let i = 0; i < block.children.length; i++) {
                 let node = this.findClass(className, block.children[i]);
@@ -122,7 +122,7 @@ class Php {
         if (!block) {
             block = this.ast!;
         }
-        if (block.kind === 'interface' &&  block.name && block.name.name === interfaceName) {
+        if (block.kind === 'interface' &&  (block as Interface).name && ((block as Interface).name as Identifier).name === interfaceName) {
             return block;
         } else if ('children' in block && (block.kind === 'program' || block.kind === 'namespace')) {
             for(let i = 0; i < block.children.length; i++) {
@@ -142,21 +142,27 @@ class Php {
      * @returns {(Method | null)}
      * @memberof Php
      */
-    findConstructor(classNode: Node): Method | null {
+    findConstructor(classNode: Class): Method | null {
         if (!classNode.body) {
+            console.log('Class body is empty');
             return null;
         }
+        // console.log('class', classNode);
         for(let node of classNode.body) {
-            if (node.kind === 'method' && node.name && node.name.name === '__construct') {
-                return node as unknown as Method;
+            if (node.kind === 'method') {
+                if (node.name && (node.name as Identifier).name === '__construct') {
+                    console.log('Node:',node);
+                    return node as unknown as Method;
+                }
             }
         }
+        console.log('Constructor not found');
         return null;
     }
 
     async getMethods(className: string): Promise<ClassMethod[]>  {
         let methods: ClassMethod[] = [];
-        let classNode = this.findClass(className) as any;
+        let classNode = this.findClass(className);
         if (!classNode) {
             classNode = this.findInterface(className) as any;
         }
@@ -165,25 +171,26 @@ class Php {
         }
         for (let item of classNode.body as any[]) {
             if (item.kind === 'method') {
-                if (item.name) {
+                let method = item as Method;
+                if (method.name) {
                     let methodVisibility: MethodVisibility;
-                    switch(item.name.visibility) {
+                    switch((method.name as any).visibility) {
                         case 'protected': methodVisibility = MethodVisibility.protected; break;
                         case 'private': methodVisibility = MethodVisibility.private; break;
                         default: methodVisibility = MethodVisibility.public; break;
                     }
                     let parameters: MethodParameter[] = [];
-                    for (let param of item.arguments) {
+                    for (let param of method.arguments) {
                         if (param.kind === 'parameter') {
                             parameters.push({
-                                type: param.type ? this.resolveType(param.type) : '',
-                                name: param.name.name,
-                                value: param.value ? param.value.raw : '',
+                                type: param.type ? this.resolveType(param.type as Name) : '',
+                                name: (param.name as Identifier).name,
+                                value: param.value ? (param.value as any).raw : '',
                             });
                         }
                     }
                     methods.push({
-                        name: item.name.name,
+                        name: (method.name as Identifier).name,
                         visibility: methodVisibility,
                         parameters
                     });

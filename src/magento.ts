@@ -262,7 +262,7 @@ class Magento {
         if (!data) {
             data = {};
         }
-        data = Object.assign(await this.getUriData(file), data);
+        data = Object.assign(await this.getUriData(file) as Object, data);
         let templateText: string = template(data);
         templateText = templateText.replace(/\$\{\d+\:(.*?)\}/g, (_match, variableName): string => {
             return data[variableName] || variableName;
