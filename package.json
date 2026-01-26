@@ -206,7 +206,7 @@
         "case": "^1.6.3",
         "delay": "^4.4.0",
         "glob": "^7.1.6",
-        "lodash": "^4.17.21",
+        "lodash": "^4.17.23",
         "minimatch": "^3.0.4",
         "node-cache": "^5.1.2",
         "p-progress": "^0.4.2",
